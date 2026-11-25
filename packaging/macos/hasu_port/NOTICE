@@ -1,0 +1,18 @@
+hasu agent
+Copyright (c) 2026 HongYun.Dev (hasu agent modifications)
+
+This product includes software developed as part of Hermes Agent by
+Nous Research, used and distributed under the MIT License:
+
+  Hermes Agent
+  Copyright (c) 2025 Nous Research
+  Licensed under the MIT License (see LICENSE).
+
+hasu is an additive distribution of Hermes Agent; the upstream MIT license
+and copyright notice above are preserved unmodified. hasu's own additions
+are distributed under the same MIT License.
+
+Portions Copyright (c) 2026 HongYun.Dev (hasu agent modifications)
+
+Copyleft-licensed optional dependencies (opt-in extras only) are listed in
+THIRD_PARTY_LICENSES.md.

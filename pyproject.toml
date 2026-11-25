@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hetu-agent"
+version = "0.3.5"
+description = "Hetu Agent — causal execution kernel x multi-objective self-evolution; independent clean-room implementation"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+authors = [{ name = "HongYun.dev" }]
+keywords = ["agent", "durable-execution", "effect-ledger", "self-evolution", "clean-room"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Software Development :: Libraries :: Application Frameworks",
+]
+dependencies = []
+
+[project.scripts]
+hetu = "hetu.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["hetu*"]

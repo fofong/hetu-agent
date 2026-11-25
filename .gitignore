@@ -1,0 +1,18 @@
+__pycache__/
+*.py[cod]
+*.db
+*.db-wal
+*.db-shm
+*.alerts.log
+.pytest_cache/
+build/
+dist/
+*.egg-info/
+.venv/
+venv/
+.DS_Store
+.repo_memory/
+
+# 本地开发便利软链与内部证据件（不入库）
+packaging/macos/src
+docs/evidence/LEAK_SCAN_*.md

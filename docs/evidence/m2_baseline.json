@@ -1,0 +1,55 @@
+{
+  "generated": "2026-11-20 14:44:13",
+  "note": "Hetu 侧自基线; 旧产品侧对照待基准集评审后另行执行",
+  "total_duplicate_side_effects": 0,
+  "scenarios": [
+    {
+      "scenario": "正常执行",
+      "fault": "none",
+      "repeat": 5,
+      "duplicate_side_effects": 0,
+      "final_statuses": [
+        "DONE"
+      ]
+    },
+    {
+      "scenario": "崩溃于副作用后",
+      "fault": "crash_at_charge",
+      "repeat": 5,
+      "duplicate_side_effects": 0,
+      "final_statuses": [
+        "DONE"
+      ]
+    },
+    {
+      "scenario": "重复投递",
+      "fault": "duplicate_delivery",
+      "repeat": 5,
+      "duplicate_side_effects": 0,
+      "final_statuses": [
+        "DONE"
+      ]
+    },
+    {
+      "scenario": "网络超时+对账",
+      "fault": "timeout_charge",
+      "repeat": 5,
+      "duplicate_side_effects": 0,
+      "final_statuses": [
+        "DONE"
+      ]
+    },
+    {
+      "scenario": "并发双跑",
+      "fault": "concurrent",
+      "repeat": 5,
+      "duplicate_side_effects": 0,
+      "final_statuses": [
+        "DONE+DONE",
+        "DONE+INTERRUPTED",
+        "DONE+RECONCILE"
+      ]
+    }
+  ],
+  "elapsed_sec": 2.5
+}

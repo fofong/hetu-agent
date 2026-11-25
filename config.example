@@ -1,0 +1,19 @@
+# Hetu Agent 配置示例 —— 仓库不内置任何远端端点，全部通过环境变量显式配置。
+# 复制为你的部署环境（shell profile、launchd EnvironmentVariables 等）后按需填写。
+
+# ---- 内核模型客户端（hetu.model / taskctl model）----
+# OpenAI 兼容服务地址，须以 /v1 结尾；未配置时内核拒绝发起模型调用（fail-closed）。
+HETU_MODEL_BASE_URL=http://127.0.0.1:8080/v1
+# 该服务上的默认模型 id（可留空，留空则由桌面端选择）。
+HETU_MODEL_NAME=example-model
+# 服务鉴权 Key（局域网服务常无鉴权，可留空）。
+HETU_MODEL_API_KEY=
+*** 全局默认思考程度: auto|off|minimal|low|medium|high|xhigh|max（默认 auto 不下发参数）
+HETU_MODEL_EFFORT=auto
+
+# ---- 桌面端「局域网 OpenAI 兼容」接入（可选）----
+# 设置后，桌面接入默认列表在 Ollama 之外追加一个远端接入项；不设置则只有本机 Ollama。
+HETU_HOST66_BASE_URL=
+HETU_HOST66_API_KEY=
+*** 状态目录隔离守卫（hetu.guard，fail-closed）：
+# HETU_HOME / HETU_DB 若被指向旧 旧产品（HongYun 前作） 产品树，Hetu 拒绝执行。保持默认即可。

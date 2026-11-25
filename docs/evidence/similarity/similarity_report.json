@@ -1,0 +1,22 @@
+{
+  "generated": "2026-11-25 16:03:10",
+  "method": "token(\\w+) 5-gram Jaccard, aggregate scores only (no upstream content)",
+  "threshold": 0.25,
+  "hetu_files": 29,
+  "upstream_roots": [
+    {
+      "label": "upstream-1",
+      "files": 3074
+    },
+    {
+      "label": "upstream-2",
+      "files": 6000
+    }
+  ],
+  "comparisons": 9074,
+  "overall_max_jaccard": 0.046,
+  "flagged_for_manual_review": [],
+  "verdict": "AUTOSCAN_PASS",
+  "disclaimer": "自动文本级筛查结论; 不能识别语义等价实现/非代码资产来源/研发过程污染, 不构成法律上的独立创作认证",
+  "elapsed_sec": 7.6
+}

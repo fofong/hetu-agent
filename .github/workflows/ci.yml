@@ -1,0 +1,27 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Unit & mechanism experiments (47+ 反例驱动)
+        run: python -m unittest discover -s tests -v
+      - name: Isolation check (洁净室隔离发布门)
+        run: python scripts/isolation_check.py
+      - name: Kernel self-check
+        run: python -m hetu status
+      - name: Regenerate evidence (禁自报绿)
+        run: python scripts/run_experiments.py
+      - name: Fail if evidence shows red
+        run: python -c "import json,sys; d=json.load(open('docs/evidence/evidence.json')); sys.exit(0 if d['all_green'] else 1)"

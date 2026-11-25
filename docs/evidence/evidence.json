@@ -1,0 +1,116 @@
+{
+  "generated": "2026-11-18 12:59:01",
+  "python": "3.9.6",
+  "third_party_runtime_deps": [],
+  "all_green": true,
+  "experiments": {
+    "A1": {
+      "module": "test_a1_effect_ledger",
+      "desc": "Effect Ledger 三态提交/回执丢失对账/租约fencing/高风险PAUSED/ledger损坏降级",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "counterexample_fixtures": 1,
+      "green": true
+    },
+    "A2": {
+      "module": "test_a2_step_writes",
+      "desc": "step_writes 任务级幂等/崩溃窗口/重复投递零副作用",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "counterexample_fixtures": 1,
+      "green": true
+    },
+    "A3": {
+      "module": "test_a3_fork_pollution",
+      "desc": "fork 分支纠正/依赖污染传播/原子交付切换",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "counterexample_fixtures": 1,
+      "green": true
+    },
+    "A4": {
+      "module": "test_a4_orphans",
+      "desc": "孤儿 action 检测与对账",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "counterexample_fixtures": 1,
+      "green": true
+    },
+    "A5": {
+      "module": "test_a5_archive",
+      "desc": "压缩即归档/原文永不删除",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "counterexample_fixtures": 1,
+      "green": true
+    },
+    "A6": {
+      "module": "test_a6_recovery_hitl",
+      "desc": "plan-hash 漂移拒续/HITL 持久挂起跨重启",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "counterexample_fixtures": 1,
+      "green": true
+    },
+    "D1": {
+      "module": "test_d1_scheduler",
+      "desc": "调度五实验: 幂等槽/漏跑台账/fencing/断点重试/投递解耦",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "counterexample_fixtures": 1,
+      "green": true
+    },
+    "L1": {
+      "module": "test_l1_evidence",
+      "desc": "哈希链防篡改/独立探针结论门/滞回stall/沙箱白名单",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "counterexample_fixtures": 0,
+      "green": true
+    },
+    "L3": {
+      "module": "test_l3_evolution",
+      "desc": "评分器物理隔离/晋级四门/心跳断点续算",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "counterexample_fixtures": 0,
+      "green": true
+    },
+    "ISO": {
+      "module": "test_isolation",
+      "desc": "与旧旧产品（HongYun 前作）严格区别: 运行时守卫fail-closed/静态发布门/反证夹具",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "counterexample_fixtures": 0,
+      "green": true
+    },
+    "P2": {
+      "module": "test_p2_runtime_e2e",
+      "desc": "一体化运行时: 崩溃恢复零重复/对账续跑/高风险挂起/漂移转人工/调度集成",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "counterexample_fixtures": 0,
+      "green": true
+    },
+    "FAULT": {
+      "module": "test_fault_matrix",
+      "desc": "故障注入矩阵: 并发执行租约互斥/网络超时对账重放/DB写失败降级",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "counterexample_fixtures": 0,
+      "green": true
+    }
+  }
+}

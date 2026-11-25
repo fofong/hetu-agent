@@ -1,0 +1,29 @@
+# Contributing to Hetu Agent
+
+欢迎贡献。参与即视为接受本文件与 `docs/CLEANROOM_POLICY.md` 全部纪律。
+
+## 硬性纪律
+
+1. **洁净室**：禁止在本仓库开发期间读取旧产品源码树；禁止把任何上游代码、
+   测试或其翻译/改写带入本仓库。
+2. **红线**（README「红线」清单）任何一条被触碰的 PR 直接关闭。
+3. **反例驱动**：新增机制必须附带实验 + 反例夹具（禁用被测机制必红）。只验本地状态
+   不验外部回执的测试不算数（禁止假通过）。
+4. **汇报纪律**：PR 描述一律「声称 → 实测证据 → 判定」，禁自报绿。
+5. **架构偏离**：先改 `docs/FUNCTIONAL_SPEC.md` / ADR，再改代码。
+
+## CLA（权利链）
+
+贡献通过 **MIT + 非独占 CLA** 路线管理：你保留版权，签署 CLA 授予项目方不可撤销的
+使用/修改/分发/约定再许可授权与专利授权（详见 `docs/RIGHTS_CHAIN.md`）。首个 PR 前
+请完成 CLA 签署流程。
+
+## 开发
+
+```bash
+python3 -m unittest discover -s tests -v   # 全部实验须绿
+python3 scripts/run_experiments.py         # 重新生成证据包
+```
+
+- Python ≥3.10，零第三方依赖（运行时与测试都是）。新增依赖须先过权利链与许可证审核。
+- 提交信息：`feat|fix|docs|spec|evidence(scope): summary`。

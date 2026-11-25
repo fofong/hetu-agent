@@ -1,0 +1,1915 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<title>Hetu Agent</title>
+<style>
+:root {
+  color-scheme: dark;
+  --bg:#121829; --side:#0e1322; --panel:#1e2949; --panel-hi:#273458; --border:#3b4a77;
+  --ink:#eef1fb; --muted:#9fb0d6; --accent:#8b7cff; --focus:#c3b6ff;
+  --mint:#7fe0bb; --amber:#ffc98a; --red:#ff97a5;
+  --cream:#f2dbbd; --cream-hi:#ffecd5; --ink-on-cream:#232f55;
+  --shadow:0 10px 32px #05091a55; --lift:0 2px 10px #05091a66;
+  --font-ui:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font:15px/1.62 var(--font-ui);
+  font-kerning:normal;
+  font-optical-sizing:auto;
+}
+* {box-sizing:border-box}
+[hidden] {display:none!important}
+body {margin:0;height:100dvh;overflow:hidden;background:var(--bg);color:var(--ink);display:grid;
+  --session-width:clamp(180px,19vw,280px);
+  --evidence-width:min(260px,28vw);
+  --dock-height:clamp(72px,20vh,180px);
+  --side-width:var(--session-width);
+  grid-template-columns:var(--side-width) minmax(0,1fr) auto;
+  grid-template-rows:34px minmax(0,1fr) auto 24px;
+  grid-template-areas:"brand tabs tabs" "side main rail" "dock dock dock" "status status status"}
+body.sidebar-hidden {--side-width:0px}
+body.mirrored {grid-template-columns:auto minmax(0,1fr) var(--side-width);
+  grid-template-areas:"brand tabs tabs" "rail main side" "dock dock dock" "status status status"}
+body.mirrored .top-brand {grid-area:1/1/2/3}
+body.mirrored .top-tabs {grid-area:1/2/2/4;margin-left:142px}
+body.mirrored .wordmark,body.sidebar-hidden .wordmark {display:none}
+body.mirrored .rail {border-left:0;border-right:1px solid #ffffff10}
+body.mirrored aside {border-right:0;border-left:1px solid #ffffff10}
+body.simple .rail,body.simple .dock,body.simple #rail-toggle {display:none}
+body.sidebar-hidden aside,body.sidebar-hidden .wordmark {display:none}
+button,input,textarea,select {font:inherit;color:inherit}
+button {cursor:pointer}
+button:disabled {cursor:default;opacity:.55}
+:focus-visible {outline:2px solid var(--focus);outline-offset:-2px;border-radius:4px}
+h1,h2,h3,p {margin:0}
+p,.hint,.empty {color:var(--muted)}
+.hint {font-size:12.5px}
+.empty {font-size:13px;padding:10px 2px}
+.icon,.tab,.launcher,.item,.inline,.settings-nav button,.dock-toggle {
+  border:0;background:transparent;color:var(--muted)
+}
+.icon,.inline {padding:3px 7px;border-radius:6px;transition:background .15s,color .15s}
+.icon {min-width:28px}
+.icon:hover,.inline:hover,.item:hover,.launcher:hover,.tab:hover,.settings-nav button:hover {background:#ffffff12;color:var(--ink)}
+.top-brand,.top-tabs {display:flex;align-items:center;gap:6px;background:var(--side);border-bottom:1px solid #ffffff0e}
+.top-brand {grid-area:brand;padding:0 6px 0 105px;min-width:0}
+.top-brand .icon {background:linear-gradient(160deg,#9a89ff,#6554e1);color:white}
+.wordmark {overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:13px;letter-spacing:.025em}
+.top-tabs {grid-area:tabs;min-width:0}
+body.sidebar-hidden .top-brand {position:relative;z-index:1;width:142px}
+body.sidebar-hidden:not(.mirrored) .top-tabs {padding-left:142px}
+.tab-list {display:flex;height:100%;gap:2px;overflow:auto;scrollbar-width:none}
+.tab {display:flex;align-items:center;flex:0 0 auto;border-bottom:2px solid transparent;max-width:190px;white-space:nowrap;padding:0 10px;transition:color .15s,background .15s}
+.tab span {overflow:hidden;text-overflow:ellipsis}
+.tab[aria-pressed=true] {color:var(--ink);background:#ffffff0a;border-bottom-color:var(--cream)}
+.tab-close {align-self:center;margin-right:4px;opacity:0}
+.tab:hover + .tab-close,.tab:focus-visible + .tab-close,.tab-close:hover,.tab-close:focus-visible {opacity:1}
+.top-actions {margin-left:auto;display:flex;padding:0 7px;gap:2px}
+aside {grid-area:side;display:flex;flex-direction:column;gap:5px;min-height:0;padding:0 9px 6px;background:var(--side);border-right:1px solid #ffffff0e;overflow:hidden}
+.side-caption {padding:9px 8px 5px;font-weight:650;border-bottom:1px solid #ffffff0e}
+.side-actions {display:grid;gap:2px}
+.launcher,.item,.settings-nav button {width:100%;text-align:left;border-radius:6px;padding:6px 8px;transition:background .15s,color .15s}
+.launcher {display:flex;align-items:center;gap:8px;color:var(--ink)}
+.launcher kbd {margin-left:auto}
+kbd {font:11px/1.3 ui-monospace,monospace;color:var(--muted);white-space:nowrap}
+.side-input,.composer textarea,.composer select {
+  border:1px solid var(--border);border-radius:6px;background:#0d1530aa;padding:6px 8px;width:100%;min-width:0;
+  transition:border-color .15s,box-shadow .15s
+}
+.side-input:focus,.composer select:focus {border-color:var(--accent);box-shadow:0 0 0 3px #8b7cff26;outline:none}
+#search {background:transparent;border-color:transparent;margin-top:3px}
+#search:focus {background:#0d1530aa;border-color:var(--border)}
+::placeholder {color:#8294bd}
+.side-history {flex:1;min-height:45px;overflow:auto}
+.side-group {display:flex;align-items:center;justify-content:space-between;gap:4px;padding:9px 3px 3px 8px;font-size:12px;color:var(--muted);font-weight:650;letter-spacing:.025em}
+.group-actions,.side-footer {display:flex;align-items:center;gap:4px}
+.side-footer {justify-content:space-between;border-top:1px solid #ffffff0e;padding:6px 1px 0 5px}
+.item {display:block;color:var(--ink)}
+.item[aria-current=true] {background:#ffffff14;box-shadow:inset 2px 0 0 var(--accent)}
+.item-line,.history-row {display:flex;align-items:center;gap:6px;min-width:0}
+.history-row {position:relative;border-radius:6px}
+.history-row:hover,.history-row:focus-within {background:#ffffff0a}
+.item-line b {flex:1}
+.session-dot {flex:none;width:5px;height:5px;border-radius:50%;background:#66759f}
+.item[aria-current=true] .session-dot {background:var(--mint);box-shadow:0 0 6px #7fe0bb88}
+.row-action {position:absolute;right:3px;top:50%;transform:translateY(-50%);opacity:0;background:var(--side)}
+.history-row:hover .row-action,.history-row:focus-within .row-action {opacity:1}
+.history-row:hover time,.history-row:focus-within time {visibility:hidden}
+.item b {font-weight:500}
+.item b,.item small,.project-name {overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item time,.item small {color:var(--muted);font-size:12px}
+.item time {flex:none}
+.item small {display:block;margin-top:1px}
+.project-name {cursor:pointer;color:var(--ink);min-width:0;padding-right:28px;list-style:none}
+.project-name::-webkit-details-marker {display:none}
+.project-caret {display:inline-block;width:13px;color:var(--muted)}
+details:not([open]) .project-caret {transform:rotate(-90deg)}
+.project-entry {position:relative}
+.project-entry > .row-action {top:3px;transform:none}
+.project-entry:hover > .row-action,.project-entry:focus-within > .row-action {opacity:1}
+.indent {padding-left:12px}
+.side-history > .hint,.indent > .hint {padding:4px 8px}
+.filter-menu {position:relative}
+.filter-menu summary {cursor:pointer;list-style:none}
+.filter-menu[open] label {position:absolute;right:0;top:calc(100% + 3px);z-index:2;white-space:nowrap;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--side);color:var(--ink);box-shadow:var(--shadow)}
+main {grid-area:main;min-width:0;overflow:auto;padding:22px clamp(14px,3vw,44px);
+  background:radial-gradient(1100px 640px at 50% -12%,#26335f 0%,#1a2340 46%,var(--bg) 78%)}
+main:has(.workspace:not([hidden])) {padding:10px 15px 8px}
+.page {max-width:1120px;margin:0 auto}
+@media (prefers-reduced-motion: no-preference) {
+  .page:not([hidden]) {animation:page-in .22s ease}
+  @keyframes page-in {from {opacity:0;transform:translateY(4px)} to {opacity:1;transform:none}}
+}
+.page-head {margin-bottom:16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.page-head h1 {font-size:24px;letter-spacing:-.02em}
+.page-head p {margin-top:4px}
+.workspace {max-width:none;min-height:100%;display:flex;flex-direction:column}
+.session-head {display:flex;align-items:center;justify-content:space-between;gap:10px}
+.session-head h1 {font-size:13px;overflow-wrap:anywhere}
+.welcome {flex:1;display:grid;align-content:center;text-align:center;padding:22px 0 30px}
+.saved-goal {margin:14px 0 14px auto;max-width:min(100%,680px);padding:10px 13px;background:#ffffff10;border:1px solid #ffffff16;border-radius:10px}
+.saved-goal p {color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere}
+.mark {flex:none;display:grid;place-items:center;width:50px;height:50px;border-radius:14px;background:linear-gradient(150deg,#a99afa,#6554e1);color:#fff;font-size:24px;font-weight:750;box-shadow:0 8px 24px #6554e155}
+.welcome-brand {display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:8px}
+.workspace.has-messages {height:100%}
+.messages {display:flex;flex:1;flex-direction:column;gap:12px;padding:12px 2px;overflow:auto;min-height:0}
+.workspace.has-messages .composer,.workspace.has-messages .session-head,.workspace.has-messages .workspace-note {flex-shrink:0}
+.workspace.has-messages .saved-goal {max-height:20%;overflow:auto}
+.message {align-self:flex-start;width:fit-content;max-width:min(90%,760px);padding:9px 12px;border-radius:10px;background:#ffffff0b;border:1px solid #ffffff0e}
+.message.user {align-self:flex-end;background:#2c3a6b;border-color:#3d4d85}
+.message p {white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink)}
+.message .msg-body {color:var(--ink)}
+.message .msg-body p {white-space:normal;margin:2px 0}
+.message .msg-body ul,.message .msg-body ol {margin:4px 0;padding-left:20px}
+.message .msg-body h4,.message .msg-body h5,.message .msg-body h6 {margin:7px 0 3px;font-size:14px}
+.message .msg-body pre {background:#0b1226;border:1px solid var(--border);border-radius:6px;padding:8px;overflow:auto;margin:6px 0}
+.message .msg-body code {background:#0b1226;border-radius:4px;padding:1px 5px;font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace}
+.message .msg-body pre code {background:none;padding:0;border:0}
+.msg-copy {opacity:0;margin-top:4px}
+.message:hover .msg-copy,.message:focus-within .msg-copy {opacity:1}
+.welcome h2 {font-size:clamp(27px,5vw,54px);font-weight:750;letter-spacing:-.048em;line-height:1.1;
+  background:linear-gradient(120deg,#e8e4ff 20%,#9a89ff 60%,#6ee7c8);-webkit-background-clip:text;background-clip:text;color:transparent}
+.welcome p {font-size:13px}
+.primary,.secondary {border:1px solid var(--border);border-radius:7px;padding:6px 10px;background:var(--panel-hi);font-weight:600;white-space:nowrap;transition:border-color .15s,background .15s,transform .1s,box-shadow .15s}
+.primary {background:linear-gradient(180deg,var(--cream-hi),var(--cream));border-color:var(--cream);color:var(--ink-on-cream);box-shadow:0 2px 10px #05091a44}
+.primary:hover:enabled {background:linear-gradient(180deg,#fff3e2,#ffe3bd)}
+.secondary:hover {border-color:var(--muted)}
+.primary:active:enabled,.secondary:active {transform:translateY(1px)}
+.composer.panel {display:flex;align-items:flex-end;flex-wrap:wrap;gap:6px;margin-top:auto;background:#16203f;border:1px solid #46578c;border-radius:10px;padding:4px 6px;transition:border-color .15s,box-shadow .15s}
+.composer:focus-within {border-color:var(--cream);box-shadow:0 0 0 3px #f2dbbd1c}
+.composer textarea {flex:1 1 160px;border:0;background:transparent;min-height:32px;max-height:120px;resize:none;field-sizing:content;overflow:auto}
+.composer textarea::placeholder {font-size:14px;letter-spacing:0}
+.composer textarea:focus-visible {outline:0}
+.composer-foot {display:flex;align-items:center;gap:7px;flex:none}
+.composer-foot select {max-width:145px;width:auto;min-height:31px;padding:3px 5px;background:transparent;border-color:transparent}
+.composer-foot .primary {padding:5px 8px;white-space:nowrap}
+.workspace-note {text-align:center;font-size:12px;color:var(--muted)}
+#save-state:not(:empty) {padding:5px 0 1px}
+.utility-links,.jobs {display:flex;flex-wrap:wrap;gap:6px;margin-bottom:13px}
+.section-title,.card-top,.task-title,.toolbar {display:flex;align-items:center;justify-content:space-between;gap:9px;flex-wrap:wrap}
+.section-title {margin:0 0 9px}
+.section-title h2 {font-size:16px;letter-spacing:-.01em}
+.cards {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.card,.panel {background:linear-gradient(180deg,var(--panel-hi),var(--panel));border:1px solid var(--border);border-radius:10px;padding:13px;box-shadow:var(--lift)}
+.card {text-align:left;transition:border-color .15s,transform .12s,box-shadow .15s}
+.card:hover {border-color:#5a6ba3;transform:translateY(-1px);box-shadow:var(--shadow)}
+.card p {font-size:12px;margin-top:5px}
+.badge {display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:20px;font-size:11px;padding:2px 9px;white-space:nowrap;color:var(--muted);background:var(--side)}
+.badge::before {content:"";flex:none;width:6px;height:6px;border-radius:50%;background:currentColor}
+.badge[data-state=pass] {color:var(--mint);border-color:#7fe0bb44}
+.badge[data-state=fail] {color:var(--red);border-color:#ff97a544}
+.badge[data-state=running] {color:#ffd9a6;border-color:#ffc98a66;background:#ffc98a1c}
+@media (prefers-reduced-motion: no-preference) {
+  .badge[data-state=running]::before {animation:pulse 1.1s ease-in-out infinite}
+  @keyframes pulse {50% {opacity:.35}}
+}
+.jobs button {border:1px solid var(--border);border-radius:7px;padding:6px 8px;background:transparent;transition:background .15s,border-color .15s}
+.jobs button[aria-pressed=true],.settings-nav button[aria-pressed=true] {background:#ffffff16;color:var(--ink);border-color:#5a6ba3}
+.task-title h2 {font-size:18px}
+.task .toolbar {margin:12px 0 8px}
+.log {margin:0;background:#0b1226;border:1px solid var(--border);border-radius:8px;padding:9px;
+  height:clamp(125px,32vh,300px);overflow:auto;color:#cfe0ff;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
+.log.nowrap {white-space:pre;overflow-wrap:normal}
+.path {overflow-wrap:anywhere;user-select:text;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+.stack {display:grid;gap:7px}
+.row {display:grid;grid-template-columns:minmax(80px,1fr) minmax(0,2fr);gap:10px;align-items:start;padding:12px 0}
+.row+.row {border-top:1px solid var(--border)}
+.row p,.row label {font-size:13px}
+.provider-row {display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid #ffffff1a;border-radius:8px;background:#ffffff08}
+.provider-row.off {opacity:.55}
+.provider-main {flex:1;min-width:0}
+.provider-main strong {font-size:13px}
+.provider-main p {color:var(--muted);font-size:12px;overflow-wrap:anywhere}
+.provider-status {font-size:12px;color:var(--muted);max-width:32%;overflow-wrap:anywhere}
+#provider-form label {display:flex;flex-direction:column;gap:4px;font-size:12px}
+input[type=checkbox] {accent-color:var(--accent)}
+.record h2,.layer h2 {font-size:15px}
+.record p,.layer p {margin-top:4px}
+.record summary {color:var(--focus);cursor:pointer}
+.record details {margin-top:8px}
+.layer {border-left:3px solid var(--accent)}
+.layer-code {display:inline-block;margin-right:7px;color:var(--focus);font:12px ui-monospace,monospace}
+.rail {grid-area:rail;display:flex;min-width:27px;min-height:0;background:var(--side);border-left:1px solid #ffffff0e}
+.rail .icon {writing-mode:vertical-rl;align-self:flex-start;padding:9px 4px;min-width:26px}
+#evidence-inline {width:min(25vw,310px);min-width:150px;overflow:auto;padding:10px}
+#evidence-inline .log {height:92px}
+#evidence-inline > h2 {font-size:14px;margin-bottom:7px}
+.dock {grid-area:dock;background:var(--side);border-top:1px solid #ffffff0e}
+.dock-toggle {display:block;padding:2px 11px;font-size:12px;width:100%;text-align:left}
+.dock .log {height:clamp(72px,20vh,180px);border:0;border-top:1px solid var(--border);border-radius:0}
+.statusbar {grid-area:status;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 11px;background:var(--side);color:var(--muted);font-size:12px;border-top:1px solid #ffffff0e}
+#settings {width:min(calc(100vw - 32px),1030px);height:calc(100dvh - 42px);padding:0;overflow:hidden;border:1px solid #48649d;
+  border-radius:10px;color:var(--ink);background:var(--side);box-shadow:0 16px 46px #08142b9c}
+#settings::backdrop {background:#0a142bbc;backdrop-filter:blur(3px)}
+#item-actions {width:min(400px,calc(100vw - 30px));border:1px solid var(--border);border-radius:10px;background:var(--panel);color:var(--ink);padding:14px;box-shadow:var(--shadow)}
+#item-actions::backdrop {background:#0a142b88}
+#item-actions h2 {font-size:16px;overflow-wrap:anywhere;margin-bottom:8px}
+#item-actions .toolbar {margin-top:12px;justify-content:flex-end}
+#item-actions .side-input {margin-top:8px}
+.settings-layout {display:grid;grid-template-columns:clamp(120px,18vw,190px) minmax(0,1fr);height:100%}
+.settings-nav {display:flex;flex-direction:column;align-items:stretch;gap:4px;background:#16203f;border-right:1px solid #ffffff0e;padding:12px 9px;overflow:auto}
+.settings-nav strong {font-size:12px;padding:4px 8px}
+.settings-content {min-width:0;overflow:auto;padding:13px clamp(12px,4vw,44px)}
+.settings-heading {display:flex;justify-content:space-between;align-items:center;margin-bottom:17px}
+.settings-heading h1 {font-size:14px}
+.settings-heading .search-pill {border:1px solid var(--border);border-radius:22px;padding:4px 12px}
+#settings-finder {padding:8px 0 15px}
+#settings-results {margin-top:5px}
+.setting-hit {outline:1px solid var(--focus);outline-offset:3px;border-radius:4px}
+#layout-editor {width:min(480px,calc(100vw - 30px));border:1px solid var(--border);border-radius:10px;background:var(--panel);color:var(--ink);padding:16px;box-shadow:var(--shadow)}
+#layout-editor::backdrop {background:#101f4366;backdrop-filter:blur(2px)}
+.layout-sizing {display:grid;gap:6px;margin-top:10px}
+.layout-sizing label {display:flex;align-items:center;justify-content:space-between;gap:8px}
+.layout-sizing input {width:52%;accent-color:var(--accent)}
+#evidence-inline {width:min(var(--evidence-width),35vw)}
+.dock #dock-log {height:min(var(--dock-height),39vh)}
+.preset-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
+.preset-grid button {text-align:left;min-width:0}
+.preset-grid button[aria-pressed=true] {border-color:var(--focus);background:#ffffff18}
+.preview-panes {display:flex;height:42px;margin-bottom:5px}
+.thumbnail-split,.thumbnail-split > div {display:flex;min-width:0;min-height:0}
+.thumbnail-split {flex:1;gap:2px}
+.thumbnail-pane {flex:1;border-radius:2px;background:color-mix(in srgb,currentColor 16%,transparent)}
+.thumbnail-pane.resting {border:1px dashed color-mix(in srgb,currentColor 30%,transparent);background:transparent}
+.settings-content h2 {font-size:20px;margin-bottom:4px}
+/* ---- 运行时页 ---- */
+.rt-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:start}
+.rt-card {margin-bottom:10px}
+.rt-form {display:flex;gap:6px;flex-wrap:wrap;margin:9px 0}
+.rt-form .side-input {width:auto;flex:1 1 120px}
+.rt-form select {min-width:170px;text-overflow:ellipsis}
+#rt-run-hint {line-height:1.65}
+.stepper {list-style:none;margin:10px 0 0;padding:0;display:grid;gap:0}
+.step {position:relative;display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:10px;align-items:start;padding:8px 0}
+.step:not(:last-child)::before {content:"";position:absolute;left:10px;top:26px;bottom:-6px;width:2px;background:#46578c}
+.step.done:not(:last-child)::before {background:var(--mint)}
+.step-dot {width:20px;height:20px;border-radius:50%;border:2px solid var(--border);display:grid;place-items:center;font-size:11px;background:var(--side);z-index:1}
+.step.done .step-dot {border-color:var(--mint);color:var(--mint)}
+.step.paused .step-dot {border-color:var(--amber);color:var(--amber)}
+.step.fault .step-dot {border-color:var(--red);color:var(--red)}
+.step.pending .step-dot {color:var(--muted)}
+.step-main {min-width:0}
+.step-main b {display:block;font-weight:600}
+.step-main small {color:var(--muted);font-size:11.5px;overflow-wrap:anywhere}
+.chip {border:1px solid var(--border);border-radius:14px;font-size:10.5px;padding:1px 8px;white-space:nowrap;color:var(--muted)}
+.chip[data-tone=ok] {color:var(--mint);border-color:#7fe0bb55;background:#7fe0bb14}
+.chip[data-tone=warn] {color:#ffd9a6;border-color:#ffc98a66;background:#ffc98a1c}
+.chip[data-tone=bad] {color:var(--red);border-color:#ff97a566;background:#ff97a514}
+.chip[data-tone=risk] {color:var(--focus);border-color:#8b7cff55}
+.interrupt-card {border:1px solid #ffc98a44;background:#ffc98a0d;border-radius:10px;padding:10px 12px}
+.interrupt-card b {font-size:13px}
+.interrupt-card p {margin:3px 0 8px}
+.interrupt-actions {display:flex;gap:6px}
+.danger {border:1px solid #ff97a566;border-radius:7px;padding:6px 10px;background:transparent;color:var(--red);font-weight:600;transition:background .15s}
+.danger:hover {background:#ff97a514}
+.chain {list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px;max-height:340px;overflow:auto}
+.chain-item {display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:baseline;padding:5px 8px;border:1px solid #ffffff0c;border-radius:7px;background:#0d153066;font-size:12px}
+.chain-item b {font-weight:600;overflow-wrap:anywhere}
+.chain-item time {color:var(--muted);font-size:11px;white-space:nowrap}
+.hash-chip {font:11px ui-monospace,monospace;color:var(--focus);background:#8b7cff14;border:1px solid #8b7cff33;border-radius:5px;padding:0 5px;user-select:text}
+.rt-table {width:100%;border-collapse:collapse;font-size:12.5px}
+.rt-table th {text-align:left;color:var(--muted);font-weight:600;font-size:11px;letter-spacing:.04em;padding:5px 8px;border-bottom:1px solid var(--border)}
+.rt-table td {padding:6px 8px;border-bottom:1px solid #ffffff0c;vertical-align:top;overflow-wrap:anywhere}
+.rt-tasks {display:flex;flex-wrap:wrap;gap:6px}
+.rt-task-chip {border:1px solid var(--border);border-radius:8px;background:var(--side);padding:5px 10px;font-size:12.5px;transition:border-color .15s}
+.rt-task-chip:hover {border-color:var(--muted)}
+.rt-task-chip[aria-pressed=true] {border-color:var(--focus);background:#8b7cff1a}
+.rt-task-chip small {color:var(--muted);margin-left:6px;font-size:11px}
+.table-wrap {overflow:auto;margin-top:8px}
+@media(max-width:790px){.composer{flex-wrap:wrap}.composer textarea{width:100%;flex-basis:100%}.composer-foot{margin-left:auto}.cards{grid-template-columns:1fr}.rt-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="top-brand">
+  <button class="icon" id="sidebar-toggle" aria-label="显示或隐藏侧栏" aria-controls="sidebar" aria-expanded="true">◧</button>
+</div>
+<header class="top-tabs" aria-label="窗口工具栏">
+  <div class="tab-list" id="tabs" aria-label="已打开的会话"></div>
+  <button class="icon" id="new-tab" aria-label="新建会话标签" title="新建会话">＋</button>
+  <div class="top-actions">
+    <button class="icon" id="rail-toggle" aria-label="显示或隐藏证据栏" aria-controls="evidence-inline" aria-expanded="false">◨</button>
+    <button class="icon" data-page="settings" aria-label="打开设置" title="设置">⚙</button>
+    <button class="icon" id="layout-toggle" aria-label="布局编辑器" title="布局编辑器">⊞</button>
+    <button class="icon" id="swap-sides" aria-label="交换侧边栏位置" title="交换侧边栏位置">⇄</button>
+  </div>
+</header>
+<aside id="sidebar">
+  <div class="side-caption">会话</div>
+  <div class="side-actions">
+    <button class="launcher" id="new-session"><span aria-hidden="true">＋</span> 新建会话 <kbd>⌘ N</kbd></button>
+    <button class="launcher" data-page="workbench"><span aria-hidden="true">▦</span> 工作台</button>
+    <button class="launcher" data-page="runtime"><span aria-hidden="true">◉</span> 任务运行时</button>
+  </div>
+  <input class="side-input" type="search" id="search" aria-label="搜索会话" placeholder="搜索会话…">
+  <details class="filter-menu" id="history-filters"><summary class="inline" aria-label="会话筛选" title="会话筛选">☰</summary><label><input id="filter-summaries" type="checkbox">显示内容摘要</label></details>
+  <form id="project-form" hidden><input id="project-name" class="side-input" aria-label="项目名称" placeholder="项目名称" maxlength="60" required><button class="secondary">创建项目</button><button class="inline" id="cancel-project" type="button">取消</button></form>
+  <div class="side-history" id="history"></div>
+  <div class="side-footer">
+    <button class="icon" id="go-home" data-page="overview" aria-current="page" aria-label="回到会话" title="回到会话">⌂</button>
+    <button class="icon" id="sidebar-settings" aria-label="打开设置" title="设置">⚙</button>
+  </div>
+</aside>
+<main>
+  <section class="page workspace" id="overview" aria-labelledby="overview-title">
+    <header class="session-head"><h1 id="overview-title" hidden>新建会话</h1><button class="secondary" id="pin" hidden>置顶</button></header>
+    <div class="welcome" id="welcome">
+      <div class="welcome-brand"><span class="mark" aria-hidden="true">河</span><h2 id="welcome-brand">Hetu Agent</h2></div>
+      <p>今天想完成什么？</p>
+    </div>
+    <article class="saved-goal" id="saved-goal" hidden><span class="hint">已保存的目标</span><p id="saved-goal-text"></p></article>
+    <div class="messages" id="messages" aria-label="会话消息" hidden></div>
+    <form class="composer panel" id="composer">
+      <textarea id="goal" aria-label="会话目标" placeholder="描述你的目标、约束或想交付的成果…（Enter 发送 · Shift+Enter 换行）" required maxlength="8000"></textarea>
+      <div class="composer-foot">
+        <select id="project" aria-label="会话项目"></select>
+        <select id="model" aria-label="可用模型" disabled><option value="">可用模型</option></select>
+        <button class="icon" id="model-settings" type="button" aria-label="模型设置" title="模型设置">⚙</button>
+        <button class="secondary" id="save-session" disabled>保存草稿</button>
+        <button class="secondary" id="stop-chat" type="button" hidden>停止</button>
+        <button class="primary" id="send-chat" type="button" disabled>发送</button>
+      </div>
+    </form>
+    <p class="workspace-note" id="save-state" role="status"></p>
+  </section>
+  <section class="page" id="workbench" hidden aria-labelledby="workbench-title">
+    <header class="page-head"><h1 id="workbench-title">工作台</h1><p>查看验证结果、运行证据和能力路线。</p></header>
+    <div class="utility-links"><button class="secondary" data-page="runtime">任务运行时</button><button class="secondary" data-page="verify">验证</button><button class="secondary" data-page="evidence">证据</button><button class="secondary" data-page="roadmap">能力路线</button></div>
+    <div class="section-title"><h2>当前可用 · 本地验证</h2><span class="hint" id="overview-summary">本次会话 · 尚无结果</span></div>
+    <div class="cards" id="cards"></div>
+  </section>
+  <section class="page" id="verify" hidden aria-labelledby="verify-title">
+    <header class="page-head"><h1 id="verify-title">验证</h1><p>先选择检查，再启动。每次只运行一项。</p></header>
+    <div class="jobs" id="jobs" role="group" aria-label="验证任务"></div>
+    <div class="panel task">
+      <div class="task-title"><h2 id="task-name"></h2><span class="badge" id="task-state" role="status"></span></div>
+      <p id="task-detail"></p>
+      <div class="toolbar"><span class="hint" id="task-meta">尚未运行</span><div class="actions"><button id="run" class="primary">运行检查</button></div></div>
+      <pre class="log" id="log" tabindex="0" aria-label="进程输出"></pre>
+    </div>
+  </section>
+  <section class="page" id="evidence" hidden aria-labelledby="evidence-title">
+    <header class="page-head"><h1 id="evidence-title">证据</h1><p>本次会话中每项检查的最近一次结果。关闭窗口后，M2 报告仍保留在本机。</p></header>
+    <div id="records" class="stack"></div>
+  </section>
+  <section class="page" id="roadmap" hidden aria-labelledby="roadmap-title">
+    <header class="page-head"><h1 id="roadmap-title">能力路线图</h1><p>目标会话 → 任务计划 → 可恢复执行 → 证据核验 → 成果交付</p></header>
+    <div class="stack">
+      <article class="panel layer"><h2><span class="layer-code">L0</span>因果执行</h2><p>持久化意图、租约和回执；不确定的副作用先对账，高风险进入人工流程。</p></article>
+      <article class="panel layer"><h2><span class="layer-code">L1</span>证据与观察</h2><p>哈希链和独立探针支持核验；无证据时保留未知。</p></article>
+      <article class="panel layer"><h2><span class="layer-code">L2</span>调度</h2><p>幂等槽、漏跑台账、重入保护和断点重试由内核管理。</p></article>
+      <article class="panel layer"><h2><span class="layer-code">L3</span>多目标演化</h2><p>工具、技能和逻辑在隔离实验中演化，保护评分器；由 Avatar 侧外部监督验收晋级，桌面尚未接入。</p></article>
+      <article class="panel layer"><h2><span class="layer-code">L4</span>通用工作台</h2><p>规划目标会话、任务与成果、人工介入及外部通道。当前桌面预览开放验证与证据。</p></article>
+    </div>
+  </section>
+  <section class="page" id="runtime" hidden aria-labelledby="runtime-title">
+    <header class="page-head">
+      <div><h1 id="runtime-title">任务运行时</h1><p>真实内核执行：效果账本、断点续跑、人工放行、证据链、调度。数据来自本机 SQLite。</p></div>
+      <div class="toolbar"><button class="secondary" id="rt-refresh">刷新</button></div>
+    </header>
+    <div class="rt-grid">
+      <article class="panel rt-card" aria-labelledby="rt-run-title">
+        <div class="section-title"><h2 id="rt-run-title">执行任务</h2><span class="badge" id="rt-overall" role="status">未加载</span></div>
+        <form class="rt-form" id="rt-run-form">
+          <input class="side-input" id="rt-task" aria-label="任务 ID" placeholder="任务 ID" maxlength="40" required pattern="[A-Za-z0-9_-]{1,40}">
+          <select class="side-input" id="rt-template" aria-label="任务模板"><option value="demo">演示流水线 · 4 步</option></select>
+          <button class="primary" id="rt-run" type="submit">运行</button>
+        </form>
+        <p class="hint" id="rt-run-hint" role="status">s3「发布成果」为高风险步骤：首次运行挂起等待人工放行；放行后再次点击运行即断点续跑，已完成步骤零重复。</p>
+        <ol class="stepper" id="rt-steps" aria-label="步骤状态"></ol>
+        <p class="empty" id="rt-steps-empty">尚无任务状态。输入任务 ID 运行，或从下方任务列表选择。</p>
+      </article>
+      <article class="panel rt-card" aria-labelledby="rt-hitl-title">
+        <div class="section-title"><h2 id="rt-hitl-title">人工审批</h2><span class="badge" id="rt-hitl-count">0 待处理</span></div>
+        <div class="stack" id="rt-interrupts"></div>
+        <p class="empty" id="rt-hitl-empty">没有等待放行的中断。高风险步骤执行前会在这里等你。</p>
+      </article>
+      <article class="panel rt-card" aria-labelledby="rt-model-title">
+        <div class="section-title"><h2 id="rt-model-title">模型服务</h2><span class="badge" id="rt-model-state" role="status">未检测</span></div>
+        <p class="hint" id="rt-model-meta">正在检测模型服务…</p>
+        <div class="toolbar"><button class="secondary" id="rt-model-test">测试对话</button></div>
+        <p class="hint" id="rt-model-reply" role="status" hidden></p>
+      </article>
+      <article class="panel rt-card" aria-labelledby="rt-ev-title">
+        <div class="section-title"><h2 id="rt-ev-title">证据链</h2><span class="badge" id="rt-ev-state">未验证</span></div>
+        <ul class="chain" id="rt-chain"></ul>
+        <p class="empty" id="rt-ev-empty">证据链为空。运行任务后，每个内核动作都会追加一条哈希链记录。</p>
+      </article>
+      <article class="panel rt-card" aria-labelledby="rt-sched-title">
+        <div class="section-title"><h2 id="rt-sched-title">调度器</h2><span class="hint" id="rt-sched-meta"></span></div>
+        <form class="rt-form" id="rt-job-form">
+          <input class="side-input" id="rt-job" aria-label="调度任务名" placeholder="job 名" maxlength="40" required pattern="[A-Za-z0-9_-]{1,40}">
+          <input class="side-input" id="rt-interval" type="number" aria-label="间隔秒" min="1" max="86400" value="300" required>
+          <select class="side-input" id="rt-policy" aria-label="补跑策略">
+            <option value="coalesce">coalesce · 合并漏跑</option>
+            <option value="per-run">per-run · 逐次补跑</option>
+            <option value="skip+alert">skip+alert · 跳过并告警</option>
+          </select>
+          <button class="primary" type="submit">登记</button>
+        </form>
+        <div class="toolbar"><button class="secondary" id="rt-rundue">执行到期槽</button></div>
+        <div class="table-wrap"><table class="rt-table" id="rt-jobs"><thead><tr><th>槽位</th><th>状态</th><th>尝试</th></tr></thead><tbody></tbody></table></div>
+        <p class="empty" id="rt-jobs-empty">尚未登记调度任务，也没有槽位。</p>
+      </article>
+    </div>
+    <article class="panel rt-card" aria-labelledby="rt-list-title">
+      <div class="section-title"><h2 id="rt-list-title">任务列表</h2><span class="hint">来自恢复点 · 点击载入状态</span></div>
+      <div class="rt-tasks" id="rt-tasks"></div>
+      <p class="empty" id="rt-tasks-empty">尚无任务记录。</p>
+    </article>
+  </section>
+</main>
+<div class="rail" aria-label="证据栏">
+  <button class="icon" id="rail-handle" aria-controls="evidence-inline" aria-expanded="false">证据</button>
+  <section id="evidence-inline" hidden aria-labelledby="evidence-inline-title">
+    <h2 id="evidence-inline-title">运行证据</h2><div class="stack" id="rail-records"></div>
+  </section>
+</div>
+<section class="dock" aria-label="本地诊断输出">
+  <button class="dock-toggle" id="dock-toggle" aria-controls="dock-log" aria-expanded="false">▸　诊断输出</button>
+  <pre class="log" id="dock-log" tabindex="0" hidden aria-label="最新诊断输出"></pre>
+</section>
+<footer class="statusbar"><span id="connection-status">◉　正在检查模型服务</span><span id="runtime-status" role="status"></span><span>通用 Super Agent　·　v__VERSION__</span></footer>
+<dialog id="layout-editor" aria-labelledby="layout-title">
+  <header class="settings-heading"><h2 id="layout-title">布局</h2><div><button class="inline" id="reset-layout">重置</button><button class="secondary" id="close-layout">完成</button></div></header>
+  <p>选择工作区布局。切换布局时会保留当前会话。</p>
+  <div class="preset-grid" role="group" aria-label="布局预设">
+    <button class="secondary" data-preset="simple">简洁</button>
+    <button class="secondary" data-preset="standard">标准</button>
+    <button class="secondary" data-preset="diagnostics">诊断</button>
+  </div>
+  <label><input id="layout-mirror" type="checkbox">会话栏放到右侧</label>
+  <div class="layout-sizing">
+    <label>会话栏宽度 <input type="range" min="150" max="400" data-size="sessions"></label>
+    <label>证据栏宽度 <input type="range" min="150" max="460" data-size="evidence"></label>
+    <label>诊断区高度 <input type="range" min="72" max="320" data-size="dock"></label>
+  </div>
+</dialog>
+<dialog id="item-actions" aria-labelledby="item-action-title">
+  <h2 id="item-action-title"></h2>
+  <p id="item-action-error" role="alert" hidden></p>
+  <div id="item-action-content"></div>
+  <form method="dialog" class="toolbar"><button class="secondary">取消</button></form>
+</dialog>
+<dialog id="settings" aria-labelledby="settings-title">
+  <div class="settings-layout">
+    <nav class="settings-nav" aria-label="设置分类">
+      <strong>设置</strong>
+      <button data-settings="models" aria-pressed="false">◇　模型</button>
+      <button data-settings="memory" aria-pressed="false">◈　记忆与云</button>
+      <button data-settings="conversation" aria-pressed="true">◫　会话</button>
+      <button data-settings="diagnostics" aria-pressed="false">▤　诊断日志</button>
+      <button data-settings="shortcuts" aria-pressed="false">⌨　键盘快捷键</button>
+      <button data-settings="about" aria-pressed="false">ⓘ　关于</button>
+    </nav>
+    <div class="settings-content">
+      <header class="settings-heading"><h1 id="settings-title">设置</h1><button class="secondary search-pill" id="open-settings-search" aria-controls="settings-finder" aria-expanded="false">⌕　搜索设置 <kbd>⌘ K</kbd></button><button class="icon" id="close-settings" aria-label="关闭设置">×</button></header>
+      <div id="settings-finder" hidden><input class="side-input" id="settings-search" type="search" placeholder="搜索设置…" aria-label="搜索设置"><div id="settings-results" class="stack"></div></div>
+      <section id="settings-models" hidden><h2>模型</h2>
+        <div class="row"><div><strong>大模型接入管理</strong><p>管理会话可调用的模型服务：OpenAI 兼容（/v1）与 Ollama，支持测试、启用与停用。</p></div><div><button class="secondary" id="refresh-models">刷新模型</button><p id="model-status" role="status"></p></div></div>
+        <div class="row"><strong>接入列表</strong><div class="stack"><div class="stack" id="provider-list"><p class="path">正在载入接入…</p></div><div><button class="secondary" id="add-provider" type="button">＋　添加接入</button></div></div></div>
+        <form id="provider-form" class="row" hidden>
+          <strong id="provider-form-title">添加接入</strong>
+          <div class="stack">
+            <label>名称<input class="side-input" id="provider-name" maxlength="40" required placeholder="例如：公司网关"></label>
+            <label>类型<select class="side-input" id="provider-kind"><option value="openai">OpenAI 兼容（/v1）</option><option value="ollama">Ollama（本机）</option></select></label>
+            <label>服务地址<input class="side-input" id="provider-url" maxlength="256" required placeholder="http://127.0.0.1:8080/v1"></label>
+            <label>API Key<input class="side-input" id="provider-key" maxlength="512" type="password" autocomplete="new-password" placeholder="可选；编辑时保留 •••• 即不变"></label>
+            <div><button class="secondary" type="submit">保存接入</button> <button class="inline" id="provider-test-btn" type="button">测试连接</button> <button class="inline" id="provider-cancel" type="button">取消</button><p id="provider-form-state" role="status"></p></div>
+          </div>
+        </form>
+        <div class="row"><strong>默认模型</strong><select id="default-model" class="side-input" aria-label="默认模型" disabled><option value="">选择模型</option></select></div>
+        <div class="row"><div><strong>默认思考程度</strong><p>全局默认，作用于每次对话。关闭思考可显著加快简单问答；“跟随服务默认”表示不下发该参数。</p></div><select id="effort" class="side-input" aria-label="默认思考程度"><option value="auto">跟随服务默认</option><option value="off">关闭思考</option><option value="minimal">最低</option><option value="low">低</option><option value="medium">中</option><option value="high">高</option><option value="xhigh">超高</option><option value="max">极限</option></select></div>
+      </section>
+      <section id="settings-memory" hidden><h2>记忆与云</h2>
+        <div class="row"><div><strong>记忆管理</strong><p>MemoraX 本机记忆：个人记忆与仓库记忆（repo memory），全部只存本机；同步为只追加，不删除远端文件。</p></div><div><button class="secondary" id="mem-refresh">刷新状态</button><p id="mem-status" role="status"></p></div></div>
+        <div class="row"><strong>记忆源</strong><div class="stack" id="mem-sources"><p class="path">正在载入记忆状态…</p></div></div>
+        <div class="row"><strong>云端开关</strong><div class="stack" id="mem-providers"><p class="path">正在载入云端状态…</p></div></div>
+        <div class="row"><div><strong>登录与凭据</strong><p>iCloud Drive 由系统 iCloud 上传，无需额外登录。Google Drive 需自行安装 Google Drive for desktop 并登录本人账号，或自行运行 rclone config 配置 remote。同步工具不保存任何凭据，上传始终走你自己的云端会话；开关默认关闭，仅在此页由你本人切换。</p></div></div>
+        <div class="row"><strong>最近同步日志</strong><div class="stack" id="mem-log"><p class="path">暂无同步记录。</p></div></div>
+      </section>
+      <section id="settings-conversation"><h2>会话</h2>
+        <div class="row"><div><strong>会话列表</strong><p>默认只显示标题和时间。</p></div><label><input id="summaries" type="checkbox">显示内容摘要</label></div>
+      </section>
+      <section id="settings-diagnostics" hidden><h2>诊断日志</h2>
+        <div class="row"><div><strong>日志显示</strong><p>应用到当前窗口的验证页和诊断栏。</p></div><div><label><input id="wrap" type="checkbox" checked>自动换行</label><br><label><input id="follow" type="checkbox" checked>跟随新日志</label></div></div>
+        <div class="row"><strong>M2 报告目录</strong><p class="path" id="data-dir"></p></div>
+      </section>
+      <section id="settings-shortcuts" hidden><h2>键盘快捷键</h2>
+        <div class="row"><strong>发送消息</strong><kbd>Enter</kbd></div>
+        <div class="row"><strong>输入换行</strong><kbd>Shift + Enter</kbd></div>
+        <div class="row"><strong>新建会话</strong><kbd>⌘ N</kbd></div>
+        <div class="row"><strong>搜索会话</strong><kbd>⌘ K</kbd></div>
+        <div class="row"><strong>打开设置</strong><kbd>⌘ ,</kbd></div>
+        <div class="row"><strong>保存草稿</strong><kbd>⌘ Return</kbd></div>
+      </section>
+      <section id="settings-about" hidden><h2>关于</h2>
+        <div class="row"><strong>应用版本</strong><p>Hetu Agent · __VERSION__</p></div>
+        <div class="row"><strong>连接范围</strong><p>本机模型会话、草稿与诊断。</p></div>
+      </section>
+    </div>
+  </div>
+</dialog>
+<script>__DESKTOP_PORT__</script>
+<script>
+'use strict';
+const {filterSettingsSearchEntries, isMetaClose, wireTabClose, treeThumbnail} = window.HasuDesktopPort;
+const jobs = {
+  selfcheck: ['内核自检', '验证效果账本、幂等槽和证据链。'],
+  tests: ['机制测试', '运行完整测试套件，覆盖恢复、调度、故障矩阵与演化门。'],
+  m2: ['M2 自基线', '运行五个故障场景，每个重复五次；同时生成 Markdown 和 JSON 报告。'],
+  isolation: ['隔离检查', '运行本仓的独立命名、来源路径与运行时守卫检查。']
+};
+const labels = {idle:'未运行', running:'运行中', pass:'通过', fail:'失败'};
+const results = Object.fromEntries(Object.keys(jobs).map(id => [id, {state:'idle', lines:[]} ]));
+const get = id => document.getElementById(id);
+const status = (node, state) => {node.dataset.state = state; node.textContent = labels[state];};
+const make = (tag, text, cls) => {
+  const node = document.createElement(tag);
+  node.textContent = text;
+  if (cls) node.className = cls;
+  return node;
+};
+// ---- 安全 Markdown 渲染（只用 DOM 构造，绝不 innerHTML）----
+function renderInline(text, parent) {
+  const re = /(`[^`\n]+`|\*\*[^*\n]+\*\*|\*[^*\n]+\*)/g;
+  let last = 0, match;
+  while ((match = re.exec(text)) !== null) {
+    if (match.index > last) parent.append(document.createTextNode(text.slice(last, match.index)));
+    const token = match[0];
+    if (token[0] === '`') parent.append(make('code', token.slice(1, -1)));
+    else if (token.startsWith('**')) parent.append(make('strong', token.slice(2, -2)));
+    else parent.append(make('em', token.slice(1, -1)));
+    last = match.index + token.length;
+  }
+  if (last < text.length) parent.append(document.createTextNode(text.slice(last)));
+}
+function renderMarkdown(text) {
+  const frag = document.createDocumentFragment();
+  const lines = text.split(/\r?\n/);
+  const isFence = line => line.startsWith('```');
+  const isBullet = line => /^\s*[-*] /.test(line);
+  const isNumber = line => /^\s*\d+\. /.test(line);
+  const isHeading = line => /^#{1,4} /.test(line);
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (isFence(line)) {
+      const code = [];
+      i++;
+      while (i < lines.length && !isFence(lines[i])) { code.push(lines[i]); i++; }
+      i++;
+      const pre = make('pre', ''), codeEl = make('code', code.join('\n'));
+      pre.append(codeEl);
+      frag.append(pre);
+      continue;
+    }
+    const heading = /^#{1,4} (.+)$/.exec(line);
+    if (heading) {
+      const h = make('h' + (heading[0].indexOf(' ') + 3), '');
+      renderInline(heading[1], h);
+      frag.append(h); i++; continue;
+    }
+    if (isBullet(line) || isNumber(line)) {
+      const ordered = isNumber(line);
+      const list = make(ordered ? 'ol' : 'ul', '');
+      while (i < lines.length && (ordered ? isNumber(lines[i]) : isBullet(lines[i]))) {
+        const li = make('li', '');
+        renderInline(lines[i].replace(ordered ? /^\s*\d+\. / : /^\s*[-*] /, ''), li);
+        list.append(li); i++;
+      }
+      frag.append(list);
+      continue;
+    }
+    if (!line.trim()) { i++; continue; }
+    const para = [line];
+    i++;
+    while (i < lines.length && lines[i].trim() && !isFence(lines[i]) &&
+           !isBullet(lines[i]) && !isNumber(lines[i]) && !isHeading(lines[i])) {
+      para.push(lines[i]); i++;
+    }
+    const p = make('p', '');
+    renderInline(para.join('\n'), p);
+    frag.append(p);
+  }
+  return frag;
+}
+function copyMessageText(text) {
+  const done = () => { get('runtime-status').textContent = '消息已复制到剪贴板'; };
+  const fallback = () => {
+    const area = document.createElement('textarea');
+    area.value = text;
+    area.style.cssText = 'position:fixed;opacity:0';
+    document.body.append(area);
+    area.select();
+    try { document.execCommand('copy'); done(); } catch (_) {}
+    area.remove();
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText)
+    navigator.clipboard.writeText(text).then(done, fallback);
+  else fallback();
+}
+const cards = {};
+const selectors = {};
+let selected = 'selfcheck', active = null, latestJob = null, page = 'overview';
+let library = {projects:[], sessions:[], summaries:false};
+let sessionId = 'draft-first', projectId = '', saving = false, loaded = false;
+let openTabs = [sessionId];
+const buffers = new Map();
+const sessionModels = new Map();
+let models = [], pendingChat = null, queuedReply = null, streamText = null;
+const EFFORTS = ['auto', 'off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'];
+const unsavedReplies = new Map();
+const filters = get('history-filters');
+const filterSummaries = get('filter-summaries');
+const newId = () => Array.from(crypto.getRandomValues(new Uint32Array(4)),
+  word => word.toString(16).padStart(8, '0')).join('');
+
+function persist(next, after, restore = renderHistory) {
+  if (!loaded || saving) return;
+  saving = true;
+  updateComposer();
+  window.savedLibrary = error => {
+    saving = false;
+    updateComposer();
+    if (error) {
+      restore();
+      if (get('item-actions').open) {
+        get('item-action-error').hidden = false;
+        get('item-action-error').textContent = error;
+      } else {
+        get('save-state').textContent = error;
+        show('overview', false);
+      }
+    } else {
+      library = next;
+      if (after) after();
+      renderHistory();
+      updateComposer();
+    }
+    if (queuedReply) {
+      const reply = queuedReply;
+      queuedReply = null;
+      receiveReply(reply);
+    }
+  };
+  try {window.webkit.messageHandlers.hetu.postMessage(JSON.stringify({op:'saveLibrary', value:next}));}
+  catch (_) {window.savedLibrary('无法连接本地存储。');}
+}
+function renderSession() {
+  const entry = library.sessions.find(item => item.id === sessionId);
+  const buffer = buffers.get(sessionId);
+  get('overview-title').textContent = entry ? entry.title : '新建会话';
+  get('overview-title').hidden = !entry;
+  get('welcome').hidden = !!entry;
+  get('saved-goal').hidden = !entry?.goal;
+  get('saved-goal-text').textContent = entry?.goal ?? '';
+  get('goal').value = buffer?.goal ?? entry?.goal ?? '';
+  projectId = buffer?.project ?? entry?.project ?? '';
+  get('pin').hidden = !entry;
+  get('pin').textContent = entry && entry.pinned ? '取消置顶' : '置顶';
+  get('save-state').textContent = buffer ? '有未保存的更改' : entry ? '已保存的目标草稿' : '';
+  renderProjects();
+  renderMessages();
+  updateComposer();
+}
+function renderProjects() {
+  const field = get('project');
+  field.replaceChildren(new Option('不归入项目', ''), ...library.projects.map(item => new Option(item.name, item.id)));
+  field.value = projectId;
+}
+function renderMessages() {
+  const container = get('messages');
+  const entry = library.sessions.find(item => item.id === sessionId);
+  const history = [...(entry?.messages ?? [])];
+  if (pendingChat?.source === sessionId) {
+    history.push(pendingChat.message, {role:'assistant', content: streamText || '正在生成回复…'});
+  } else if (unsavedReplies.has(sessionId)) {
+    const {message, text} = unsavedReplies.get(sessionId);
+    history.push(message, {role:'assistant', content:text});
+  }
+  get('overview').classList.toggle('has-messages', history.length > 0 && !!entry);
+  container.hidden = !history.length;
+  container.replaceChildren(...history.map(message => {
+    const row = make('article', '', 'message ' + message.role);
+    row.append(make('span', message.role === 'user' ? '你' : 'Hetu Agent', 'hint'));
+    if (message.role === 'assistant') {
+      const body = make('div', '', 'msg-body');
+      body.append(renderMarkdown(message.content));
+      row.append(body);
+    } else {
+      row.append(make('p', message.content));
+    }
+    const copy = make('button', '复制', 'inline msg-copy');
+    copy.setAttribute('aria-label', '复制这条消息');
+    copy.onclick = () => copyMessageText(message.content);
+    row.append(copy);
+    return row;
+  }));
+  if (unsavedReplies.has(sessionId)) {
+    const source = sessionId;
+    const retry = make('button', '重试保存回复', 'secondary');
+    retry.onclick = () => saveReply(unsavedReplies.get(source));
+    container.append(retry);
+  }
+  container.scrollTop = container.scrollHeight;
+}
+function updateComposer() {
+  const entry = library.sessions.find(item => item.id === sessionId);
+  const choice = sessionModels.get(sessionId) ?? entry?.model ?? library.defaultModel ?? '';
+  const field = get('model');
+  field.replaceChildren(new Option(models.length ? '选择模型' : '可用模型', ''),
+    ...models.map(model => new Option(model, model)));
+  field.value = models.includes(choice) ? choice : '';
+  field.disabled = !models.length || pendingChat?.source === sessionId;
+  get('send-chat').disabled = !loaded || saving || !!pendingChat || unsavedReplies.has(sessionId)
+    || !field.value || !get('goal').value.trim();
+  get('save-session').disabled = !loaded || saving || pendingChat?.source === sessionId;
+  get('stop-chat').hidden = !pendingChat;
+  if (!pendingChat) get('stop-chat').disabled = false;
+  const defaults = get('default-model');
+  defaults.replaceChildren(new Option('选择模型', ''), ...models.map(model => new Option(model, model)));
+  defaults.value = models.includes(library.defaultModel) ? library.defaultModel : '';
+  defaults.disabled = !models.length || saving;
+}
+function refreshModels() {
+  get('refresh-models').disabled = true;
+  get('connection-status').textContent = '◉　正在检查模型服务';
+  get('model-status').textContent = '正在查询模型…';
+  try {window.webkit.messageHandlers.hetu.postMessage(JSON.stringify({op:'refreshModels'}));}
+  catch (_) {showModels({models:[], error:'无法查询模型服务。'});}
+}
+function showModels(value) {
+  models = value.models;
+  for (const item of value.providers ?? []) {
+    providerStatus[item.id] = item.ok ? '可用 · ' + item.count + ' 个模型' : '不可用：' + item.error;
+  }
+  if (providerCfg) renderProviders();
+  get('refresh-models').disabled = false;
+  get('model-status').textContent = value.error ?? value.warning ?? (models.length ? '已找到 ' + models.length + ' 个可用模型。' : '模型服务尚未就绪。');
+  get('connection-status').textContent = value.error ? '◉　模型服务未连接' : models.length ? '◉　模型服务已连接' : '◉　无可用模型';
+  updateComposer();
+}
+let providerCfg = null, providerEditing = null;
+const providerStatus = {};
+const KIND_FALLBACK = {ollama:'Ollama', openai:'OpenAI 兼容'};
+let providerKinds = KIND_FALLBACK;
+function postDesktop(payload) {
+  try { window.webkit.messageHandlers.hetu.postMessage(JSON.stringify(payload)); return true; }
+  catch (_) { return false; }
+}
+function requestProviders() {
+  if (!postDesktop({op:'providers'}))
+    get('provider-list').replaceChildren(make('p','无法连接本地设置存储。','path'));
+}
+function requestMemStatus() {
+  if (!postDesktop({op:'memStatus'}))
+    {memBusy(false); get('mem-status').textContent = '无法连接本地设置存储。';}
+}
+function memBusy(on) {
+  for (const b of get('settings-memory').querySelectorAll('button')) b.disabled = on;
+}
+function renderMem(value) {
+  const names = {icloud:'iCloud Drive', gdrive:'Google Drive'};
+  get('mem-status').textContent = '';
+  const src = get('mem-sources'); src.replaceChildren();
+  for (const s of value.sources ?? []) {
+    const row = make('div','','provider-row');
+    row.append(make('strong', s.name));
+    row.append(make('p', s.path + (s.exists ? ' · ' + s.file_count + ' 个文件' : ' · 目录缺失'), 'path'));
+    src.append(row);
+  }
+  if (!src.childElementCount) src.append(make('p','暂无记忆源。','path'));
+  const prov = get('mem-providers'); prov.replaceChildren();
+  for (const key of ['icloud','gdrive']) {
+    const p = value.providers?.[key] ?? {};
+    const row = make('div','','provider-row');
+    const head = make('div','');
+    head.append(make('strong', names[key] + (p.enabled ? ' · 已开启' : ' · 已关闭')));
+    head.append(make('p', (p.ready ? '就绪' : '未就绪') + (p.destination ? ' · ' + p.destination : ''), 'path'));
+    if (!p.ready && p.hint) head.append(make('p', p.hint, 'path'));
+    const btns = make('div','');
+    const toggle = make('button', p.enabled ? '关闭' : '开启', 'secondary');
+    toggle.onclick = () => {
+      memBusy(true); get('mem-status').textContent = '正在切换…';
+      if (!postDesktop({op:'memToggle', provider:key, on:!p.enabled})) {
+        memBusy(false); get('mem-status').textContent = '无法连接本地设置存储。';
+      }
+    };
+    const go = make('button','立即同步','secondary');
+    go.disabled = p.enabled !== true || p.ready !== true;
+    go.onclick = () => {
+      memBusy(true); get('mem-status').textContent = '正在同步 ' + names[key] + '…';
+      if (!postDesktop({op:'memSync', provider:key})) {
+        memBusy(false); get('mem-status').textContent = '无法连接本地设置存储。';
+      }
+    };
+    btns.append(toggle, go);
+    row.append(head, btns);
+    prov.append(row);
+  }
+  const log = get('mem-log'); log.replaceChildren();
+  const lines = value.log_tail ?? [];
+  if (!lines.length) log.append(make('p','暂无同步记录。','path'));
+  for (const line of lines.slice(-6)) log.append(make('p', line, 'path'));
+}
+get('mem-refresh').onclick = () => { memBusy(true); requestMemStatus(); };
+function renderProviders() {
+  const list = get('provider-list');
+  list.replaceChildren();
+  for (const p of providerCfg?.providers ?? []) {
+    const row = make('div','','provider-row');
+    if (!p.enabled) row.classList.add('off');
+    const toggle = document.createElement('input');
+    toggle.type = 'checkbox'; toggle.checked = p.enabled;
+    toggle.title = '启用该接入'; toggle.setAttribute('aria-label', '启用 ' + p.name);
+    toggle.onchange = () => saveProviders({...providerCfg,
+      providers: providerCfg.providers.map(x => x.id === p.id ? {...x, enabled:toggle.checked} : x)});
+    const main = make('div','','provider-main');
+    main.append(make('strong', p.name), make('p', (providerKinds[p.kind] ?? p.kind) + ' · ' + p.base_url));
+    const st = make('span', providerStatus[p.id] ?? (p.enabled ? '' : '已停用'), 'provider-status');
+    st.dataset.pid = p.id;
+    const test = make('button','测试','inline');
+    test.onclick = () => { st.textContent = '测试中…';
+      if (!postDesktop({op:'providerTest', id:p.id})) st.textContent = '无法连接本地服务。'; };
+    const edit = make('button','编辑','inline');
+    edit.onclick = () => openProviderForm(p);
+    const del = make('button','删除','inline');
+    del.onclick = () => {
+      if (del.dataset.armed !== '1') {
+        del.dataset.armed = '1'; del.textContent = '确认删除？';
+        setTimeout(() => { del.dataset.armed = ''; del.textContent = '删除'; }, 3000);
+        return;
+      }
+      saveProviders({...providerCfg, providers: providerCfg.providers.filter(x => x.id !== p.id)});
+    };
+    row.append(toggle, main, st, test, edit, del);
+    list.append(row);
+  }
+  if (!list.children.length) list.append(make('p','暂无接入，点下方“＋　添加接入”新建一个。','path'));
+}
+function saveProviders(next) {
+  if (!postDesktop({op:'providersSave', value:next}))
+    get('model-status').textContent = '无法连接本地设置存储。';
+}
+function openProviderForm(p) {
+  providerEditing = p?.id ?? null;
+  get('provider-form-title').textContent = p ? '编辑接入' : '添加接入';
+  get('provider-name').value = p?.name ?? '';
+  get('provider-kind').value = p?.kind ?? 'openai';
+  get('provider-url').value = p?.base_url ?? '';
+  get('provider-key').value = p?.api_key ?? '';
+  get('provider-form').hidden = false;
+  get('provider-form-state').textContent = '';
+  get('provider-name').focus();
+}
+function providerFormDraft() {
+  return {name: get('provider-name').value.trim(), kind: get('provider-kind').value,
+    base_url: get('provider-url').value.trim(), api_key: get('provider-key').value};
+}
+function providerFormValue() {
+  const list = providerCfg?.providers ?? [];
+  const draft = providerFormDraft();
+  const providers = providerEditing
+    ? list.map(x => x.id === providerEditing ? {...x, ...draft} : x)
+    : [...list, {id:'p-' + newId().slice(0,12), ...draft, enabled:true}];
+  return {version: providerCfg?.version ?? 1, default: providerCfg?.default ?? null, providers};
+}
+function showProviderTest(id, value) {
+  const text = value.error ?? '连接正常，发现 ' + value.count + ' 个模型';
+  if (!get('provider-form').hidden && (id === providerEditing || id === 'draft')) {
+    get('provider-form-state').textContent = text;
+    return;
+  }
+  providerStatus[id] = text;
+  renderProviders();
+}
+get('add-provider').onclick = () => openProviderForm(null);
+get('provider-cancel').onclick = () => { get('provider-form').hidden = true; providerEditing = null; };
+get('provider-form').onsubmit = event => { event.preventDefault(); saveProviders(providerFormValue()); };
+get('provider-test-btn').onclick = () => {
+  get('provider-form-state').textContent = '测试中…';
+  if (!postDesktop({op:'providerTest', id: providerEditing ?? 'draft', draft: providerFormDraft()}))
+    get('provider-form-state').textContent = '无法连接本地服务。';
+};
+function sendChat() {
+  if (get('send-chat').disabled) return;
+  const entry = library.sessions.find(item => item.id === sessionId);
+  const message = {role:'user', content:get('goal').value.trim()};
+  const model = get('model').value;
+  pendingChat = {source:sessionId, project:projectId, model, message};
+  streamText = null;
+  buffers.set(sessionId, {goal:get('goal').value, project:projectId});
+  renderMessages();
+  get('save-state').textContent = '等待模型回复…';
+  updateComposer();
+  try {
+    window.webkit.messageHandlers.hetu.postMessage(JSON.stringify({
+      op:'chat', model, effort: EFFORTS.includes(library.effort) ? library.effort : 'auto',
+      messages:[...(entry?.messages ?? []).slice(-30), message]
+    }));
+  } catch (_) {receiveReply({error:'无法连接模型服务。'});}
+}
+function receiveReply(value) {
+  if (!pendingChat) return;
+  if (saving) {queuedReply = value; return;}
+  const turn = pendingChat;
+  const {source} = turn;
+  pendingChat = null;
+  streamText = null;
+  if (value.stopped && !value.text) {
+    renderMessages();
+    updateComposer();
+    get('runtime-status').textContent = '已停止生成';
+    if (sessionId === source) get('save-state').textContent = '已停止生成，输入内容已保留。';
+    return;
+  }
+  if (value.error) {
+    renderMessages();
+    updateComposer();
+    get('runtime-status').textContent = value.error;
+    if (sessionId === source) get('save-state').textContent = value.error;
+    return;
+  }
+  const reply = {...turn, text:value.text + (value.stopped ? '\n（已停止生成）' : '')};
+  unsavedReplies.set(source, reply);
+  saveReply(reply);
+}
+function saveReply({source, project, model, message, text}) {
+  const previous = library.sessions.find(item => item.id === source);
+  const entry = {
+    ...previous, id:previous?.id ?? newId(), title:previous?.title ?? message.content.split(/\r?\n/)[0].slice(0,64),
+    project:previous?.project ?? project, pinned:previous?.pinned ?? false, goal:'', model, updated:Date.now(),
+    messages:[...(previous?.messages ?? []), message, {role:'assistant',content:text}]
+  };
+  const next = {...library, sessions:[entry, ...library.sessions.filter(item => item.id !== entry.id)]};
+  persist(next, () => {
+    unsavedReplies.delete(source);
+    const buffer = buffers.get(source);
+    buffers.delete(source);
+    if (buffer && (buffer.goal.trim() !== message.content || buffer.project !== project)) {
+      buffers.set(entry.id, buffer);
+    }
+    openTabs = openTabs.map(id => id === source ? entry.id : id);
+    if (sessionId === source) {sessionId = entry.id; renderSession();}
+    sessionModels.delete(source);
+    renderTabs();
+    get('runtime-status').textContent = '回复已保存';
+  }, () => {
+    renderMessages();
+    get('runtime-status').textContent = '回复未保存。';
+  });
+}
+get('refresh-models').onclick = refreshModels;
+get('send-chat').onclick = sendChat;
+get('stop-chat').onclick = () => {
+  if (!pendingChat) return;
+  get('stop-chat').disabled = true;
+  get('runtime-status').textContent = '正在停止生成…';
+  postDesktop({op:'chatStop'});
+};
+// Enter 发送（IME 合成中、Shift/⌘ 组合除外）；不可发送时 Enter 保留为换行
+get('goal').addEventListener('keydown', event => {
+  if (event.key !== 'Enter' || event.shiftKey || event.metaKey ||
+      event.ctrlKey || event.altKey) return;
+  if (event.isComposing || event.keyCode === 229) return;
+  if (get('send-chat').disabled) return;
+  event.preventDefault();
+  sendChat();
+});
+get('effort').onchange = () => persist({...library, effort:get('effort').value});
+get('model').onchange = () => {
+  sessionModels.set(sessionId, get('model').value);
+  updateComposer();
+};
+get('default-model').onchange = () => persist({...library, defaultModel:get('default-model').value});
+get('model-settings').onclick = () => {
+  show('settings');
+  get('settings').querySelector('[data-settings=models]').click();
+};
+function openSession(entry, draft = 'draft-' + newId()) {
+  sessionId = entry?.id ?? draft;
+  if (!openTabs.includes(sessionId)) openTabs.push(sessionId);
+  renderSession();
+  renderHistory();
+  show('overview', false);
+  get('goal').focus();
+}
+function cacheDraft() {
+  const firstChange = !buffers.has(sessionId);
+  buffers.set(sessionId, {goal:get('goal').value, project:projectId});
+  get('save-state').textContent = '有未保存的更改';
+  if (firstChange) renderTabs();
+}
+function renderTabs() {
+  const tabs = get('tabs');
+  tabs.replaceChildren();
+  for (const id of openTabs) {
+    const entry = library.sessions.find(item => item.id === id);
+    const label = entry?.title ?? '新建会话';
+    const tab = make('button', '', 'tab');
+    tab.append(make('span', label));
+    tab.title = label;
+    tab.dataset.sessionTab = id;
+    tab.setAttribute('aria-pressed', String(page === 'overview' && id === sessionId));
+    const closeable = entry || openTabs.length > 1 || buffers.has(id);
+    tab.onclick = event => {
+      if (closeable && isMetaClose(event)) requestTabClose(id);
+      else openSession(entry, id);
+    };
+    tabs.append(tab);
+    if (closeable) {
+      wireTabClose(tab, () => requestTabClose(id));
+      tab.oncontextmenu = event => {
+        event.preventDefault();
+        const index = openTabs.indexOf(id);
+        const groups = [
+          ['关闭标签', [id]],
+          ['关闭其他标签', openTabs.filter(other => other !== id)],
+          ['关闭右侧标签', openTabs.slice(index + 1)],
+          ['关闭所有标签', openTabs]
+        ];
+        actionsFor(label, content => {
+          for (const [verb, ids] of groups) {
+            const button = actionButton(content, verb, () => {
+              get('item-actions').close();
+              requestTabClose(...ids);
+            });
+            button.disabled = !ids.length || ids.some(tabId => pendingChat?.source === tabId || unsavedReplies.has(tabId));
+          }
+        });
+      };
+      const close = make('button', '×', 'icon tab-close');
+      close.setAttribute('aria-label', '关闭会话标签：' + label);
+      close.dataset.closeTab = id;
+      close.onclick = () => requestTabClose(id);
+      tabs.append(close);
+    }
+  }
+}
+function requestTabClose(...ids) {
+  if (saving || ids.some(id => pendingChat?.source === id || unsavedReplies.has(id)) || document.querySelector('dialog[open]')) return;
+  const dirty = ids.filter(id => buffers.has(id));
+  if (!dirty.length) {closeTabs(ids); return;}
+  actionsFor('关闭未保存的会话', content => {
+    content.append(make('p', '关闭会丢弃 ' + dirty.length + ' 个标签的未保存更改。'));
+    actionButton(content, '丢弃更改并关闭', () => {
+      dirty.forEach(id => buffers.delete(id));
+      get('item-actions').close();
+      closeTabs(ids);
+    });
+  });
+}
+function closeTabs(ids) {
+  const activeIndex = openTabs.indexOf(sessionId);
+  const neighbor = openTabs.slice(0, activeIndex).filter(id => !ids.includes(id)).at(-1);
+  openTabs = openTabs.filter(id => !ids.includes(id));
+  ids.forEach(id => sessionModels.delete(id));
+  if (!openTabs.length) openTabs = ['draft-' + newId()];
+  if (ids.includes(sessionId)) {
+    const next = neighbor ?? openTabs[0];
+    openSession(library.sessions.find(item => item.id === next), next);
+  } else renderTabs();
+}
+function actionsFor(title, build) {
+  const dialog = get('item-actions');
+  get('item-action-title').textContent = title;
+  get('item-action-error').hidden = true;
+  const content = get('item-action-content');
+  content.replaceChildren();
+  build(content);
+  if (!dialog.open) dialog.showModal();
+}
+function actionButton(parent, label, action) {
+  const button = make('button', label, 'secondary');
+  button.type = 'button';
+  button.onclick = action;
+  parent.append(button);
+  return button;
+}
+function rowAction(label, action) {
+  const button = make('button', '⋯', 'icon row-action');
+  button.setAttribute('aria-label', label);
+  button.title = label;
+  button.onclick = action;
+  return button;
+}
+function updateSession(entry, changes) {
+  persist({...library, sessions:library.sessions.map(item => item.id === entry.id ? {...item, ...changes} : item)}, () => {
+    if ('project' in changes && buffers.has(entry.id)) buffers.get(entry.id).project = changes.project;
+    if (sessionId === entry.id) {
+      if ('project' in changes) {projectId = changes.project; renderProjects();}
+      get('pin').textContent = (changes.pinned ?? entry.pinned) ? '取消置顶' : '置顶';
+    }
+    if (get('item-actions').open) get('item-actions').close();
+  });
+}
+function sessionActions(entry) {
+  actionsFor(entry.title, content => {
+    actionButton(content, entry.pinned ? '取消置顶' : '置顶', () => updateSession(entry, {pinned:!entry.pinned}));
+    const rename = make('form', '');
+    const renameInput = make('input', '', 'side-input');
+    renameInput.setAttribute('aria-label', '新的会话名称');
+    renameInput.value = entry.title;
+    renameInput.maxLength = 64;
+    renameInput.required = true;
+    rename.append(renameInput, make('button', '重命名', 'secondary'));
+    rename.onsubmit = event => {
+      event.preventDefault();
+      const title = renameInput.value.trim();
+      if (title) updateSession(entry, {title});
+    };
+    content.append(rename);
+    const project = make('select', '', 'side-input');
+    project.setAttribute('aria-label', '移动到项目');
+    project.append(new Option('不归入项目', ''), ...library.projects.map(item => new Option(item.name, item.id)));
+    project.value = entry.project;
+    content.append(project);
+    actionButton(content, '移动会话', () => updateSession(entry, {project:project.value}));
+    const del = actionButton(content, '删除会话', () => deleteSessionConfirm(entry));
+    del.classList.add('danger');
+    if (saving || pendingChat?.source === entry.id || unsavedReplies.has(entry.id)) {
+      del.disabled = true;
+      del.title = '该会话正在等待模型回复或有回复未保存，完成前不能删除。';
+    }
+  });
+}
+function projectActions(project) {
+  actionsFor(project.name, content => {
+    const form = make('form', '');
+    const name = make('input', '', 'side-input');
+    name.setAttribute('aria-label', '新项目名称');
+    name.value = project.name;
+    name.maxLength = 60;
+    name.required = true;
+    const save = make('button', '保存项目名称', 'secondary');
+    form.append(name, save);
+    form.onsubmit = event => {
+      event.preventDefault();
+      const trimmed = name.value.trim();
+      if (!trimmed) return;
+      persist({...library, projects:library.projects.map(item => item.id === project.id ? {...item, name:trimmed} : item)}, () => {
+        renderProjects();
+        get('item-actions').close();
+      });
+    };
+    content.append(form);
+    const count = library.sessions.filter(item => item.project === project.id).length;
+    content.append(make('p', count ? '项目内有 ' + count + ' 个会话；删除项目只移除分组，会话会移到「最近会话」。' : '项目内暂无会话。', 'hint'));
+    actionButton(content, '删除项目', () => deleteProjectConfirm(project)).classList.add('danger');
+  });
+}
+function deleteSessionConfirm(entry) {
+  actionsFor('删除会话', content => {
+    content.append(make('p', '确定永久删除「' + entry.title + '」？此操作不可撤销。'));
+    actionButton(content, '永久删除', () => deleteSession(entry)).classList.add('danger');
+  });
+}
+function deleteSession(entry) {
+  persist({...library, sessions:library.sessions.filter(item => item.id !== entry.id)}, () => {
+    get('item-actions').close();
+    buffers.delete(entry.id);
+    closeTabs([entry.id]);
+    get('runtime-status').textContent = '会话已删除';
+  }, () => get('item-actions').close());
+}
+function deleteProjectConfirm(project) {
+  const count = library.sessions.filter(item => item.project === project.id).length;
+  actionsFor('删除项目', content => {
+    content.append(make('p', '确定删除项目「' + project.name + '」？' +
+      (count ? '其中的 ' + count + ' 个会话会移到「最近会话」，不会被删除。' : '此操作不可撤销。')));
+    actionButton(content, '永久删除', () => deleteProject(project)).classList.add('danger');
+  });
+}
+function deleteProject(project) {
+  persist({...library,
+    projects:library.projects.filter(item => item.id !== project.id),
+    sessions:library.sessions.map(item => item.project === project.id ? {...item, project:''} : item)
+  }, () => {
+    get('item-actions').close();
+    if (projectId === project.id) {
+      projectId = '';
+      const buffer = buffers.get(sessionId);
+      if (buffer) buffer.project = '';
+    }
+    renderProjects();
+    get('runtime-status').textContent = '项目已删除';
+  }, () => get('item-actions').close());
+}
+function sessionRow(entry) {
+  const button = make('button', '', 'item');
+  button.dataset.session = entry.id;
+  if (entry.id === sessionId) button.setAttribute('aria-current', 'true');
+  const line = make('span', '', 'item-line');
+  const stamp = new Date(entry.updated);
+  const minutes = Math.max(0, Math.floor((Date.now() - entry.updated) / 60000));
+  const time = make('time', minutes < 1 ? '刚刚' : minutes < 60 ? minutes + ' 分钟前' : stamp.toLocaleDateString());
+  time.title = stamp.toLocaleString();
+  const dot = make('span', '', 'session-dot');
+  dot.setAttribute('aria-hidden', 'true');
+  line.append(dot, make('b', entry.title), time);
+  button.append(line);
+  if (library.summaries) button.append(make('small', entry.goal.slice(0, 120)));
+  button.onclick = () => openSession(entry);
+  const row = make('div', '', 'history-row');
+  row.append(button, rowAction('会话操作：' + entry.title, () => sessionActions(entry)));
+  return row;
+}
+function renderHistory() {
+  const history = get('history');
+  history.replaceChildren();
+  get('summaries').checked = library.summaries;
+  filterSummaries.checked = library.summaries;
+  const query = get('search').value.trim().toLocaleLowerCase();
+  const sorted = library.sessions.slice().sort((left, right) => right.updated - left.updated);
+  if (query) {
+    const entries = sorted.filter(entry => entry.goal.toLocaleLowerCase().includes(query) ||
+      (entry.messages ?? []).some(msg => msg.content.toLocaleLowerCase().includes(query)) ||
+      library.projects.some(project => project.id === entry.project && project.name.toLocaleLowerCase().includes(query)));
+    history.append(make('div', '搜索结果', 'side-group'), ...entries.map(sessionRow));
+    if (!entries.length) history.append(make('p', '未找到会话', 'hint'));
+    return;
+  }
+  const group = (label, entries) => {
+    if (entries.length) history.append(make('div', label, 'side-group'), ...entries.map(sessionRow));
+  };
+  group('置顶', sorted.filter(entry => entry.pinned));
+  const header = make('div', '项目', 'side-group');
+  const actions = make('div', '', 'group-actions');
+  const add = make('button', '＋', 'inline');
+  add.setAttribute('aria-label', '新建项目');
+  add.id = 'new-project';
+  add.onclick = () => {get('project-form').hidden = false; get('project-name').focus();};
+  actions.append(add, filters);
+  header.append(actions);
+  history.append(header);
+  library.projects.forEach(project => {
+    const part = make('details', '');
+    part.open = !project.collapsed;
+    const title = make('summary', '', 'item project-name');
+    const caret = make('span', '⌄', 'project-caret');
+    caret.setAttribute('aria-hidden', 'true');
+    title.append(caret, document.createTextNode(project.name));
+    title.title = project.name;
+    title.addEventListener('click', event => {
+      event.preventDefault();
+      persist({...library, projects:library.projects.map(item => item === project ? {...item, collapsed:part.open} : item)});
+    });
+    const list = make('div', '', 'indent');
+    const entries = sorted.filter(entry => entry.project === project.id && !entry.pinned);
+    list.append(...entries.map(sessionRow));
+    if (!entries.length) list.append(make('p', '暂无会话', 'hint'));
+    const create = make('button', '＋ 新建会话', 'inline');
+    create.onclick = () => {openSession(null); projectId = project.id; renderProjects(); cacheDraft();};
+    list.append(create);
+    part.append(title, list);
+    const container = make('div', '', 'project-entry');
+    container.append(part, rowAction('项目操作：' + project.name, () => projectActions(project)));
+    history.append(container);
+  });
+  group('最近会话', sorted.filter(entry => !entry.project && !entry.pinned));
+  if (!sorted.length) history.append(make('p', '尚无会话', 'hint'));
+}
+get('new-session').onclick = () => openSession(null);
+get('new-tab').onclick = get('new-session').onclick;
+get('search').oninput = renderHistory;
+get('project').onchange = () => {projectId = get('project').value; cacheDraft();};
+get('goal').oninput = () => {cacheDraft(); updateComposer();};
+get('cancel-project').onclick = () => {get('project-form').hidden = true;};
+get('project-form').onsubmit = event => {
+  event.preventDefault();
+  const name = get('project-name').value.trim();
+  if (!name) return;
+  const project = {id:newId(), name, collapsed:false};
+  const source = sessionId;
+  persist({...library, projects:[...library.projects, project]}, () => {
+    get('project-form').reset();
+    get('project-form').hidden = true;
+    renderProjects();
+    if (sessionId === source) {
+      projectId = project.id;
+      get('project').value = projectId;
+      cacheDraft();
+    }
+  });
+};
+get('composer').onsubmit = event => {
+  event.preventDefault();
+  const goal = get('goal').value.trim();
+  if (!goal || pendingChat?.source === sessionId) return;
+  const source = sessionId;
+  const old = library.sessions.find(item => item.id === source);
+  const entry = {...old, id:old?.id ?? newId(), goal, title:old?.messages?.length ? old.title : goal.split(/\r?\n/)[0].slice(0, 64),
+    project:projectId, updated:Date.now(), pinned:old?.pinned ?? false};
+  persist({...library, sessions:[entry, ...library.sessions.filter(item => item.id !== entry.id)]}, () => {
+    const pending = buffers.get(source);
+    if (pending && pending.goal.trim() === goal && pending.project === entry.project) buffers.delete(source);
+    else if (pending && source !== entry.id) {buffers.set(entry.id, pending); buffers.delete(source);}
+    openTabs = openTabs.map(id => id === source ? entry.id : id);
+    if (sessionId === source) {
+      sessionId = entry.id;
+      renderSession();
+      if (!buffers.has(entry.id)) get('save-state').textContent = '已保存到本机';
+    }
+    renderTabs();
+  });
+};
+get('pin').onclick = () => {
+  const entry = library.sessions.find(item => item.id === sessionId);
+  if (entry) updateSession(entry, {pinned:!entry.pinned});
+};
+get('summaries').onchange = () => persist({...library, summaries:get('summaries').checked});
+filterSummaries.onchange = () => persist({...library, summaries:filterSummaries.checked});
+get('sidebar-settings').onclick = () => show('settings');
+get('close-settings').onclick = () => get('settings').close();
+const settingsButtons = [...document.querySelectorAll('[data-settings]')];
+function settingsSection(button) {
+  settingsButtons.forEach(item => {
+    item.setAttribute('aria-pressed', String(item === button));
+    get('settings-' + item.dataset.settings).hidden = item !== button;
+  });
+}
+function hideFinder() {
+  get('settings-finder').hidden = true;
+  get('open-settings-search').setAttribute('aria-expanded', 'false');
+}
+settingsButtons.forEach(button => button.onclick = () => { hideFinder(); settingsSection(button); });
+get('settings').querySelector('[data-settings=models]').addEventListener('click', requestProviders);
+get('settings').querySelector('[data-settings=memory]').addEventListener('click', requestMemStatus);
+get('open-settings-search').onclick = () => {
+  get('settings-finder').hidden = false;
+  get('open-settings-search').setAttribute('aria-expanded', 'true');
+  get('settings-search').oninput();
+  get('settings-search').focus();
+};
+get('settings').addEventListener('close', hideFinder);
+get('settings-search').oninput = () => {
+  const query = get('settings-search').value.trim();
+  const results = get('settings-results');
+  results.replaceChildren();
+  const entries = settingsButtons.flatMap(category => {
+    const section = get('settings-' + category.dataset.settings);
+    const title = section.querySelector('h2').textContent;
+    return [...section.querySelectorAll('.row')].map(row => ({
+      category, row, context:title, label:row.querySelector('strong').textContent,
+      description:row.textContent, keywords:[category.dataset.settings]
+    }));
+  });
+  for (const {context, label, category, row} of query ? filterSettingsSearchEntries(entries, query) : entries) {
+      const match = make('button', context + ' › ' + label, 'launcher');
+      match.onclick = () => {
+        hideFinder();
+        settingsSection(category);
+        document.querySelector('.setting-hit')?.classList.remove('setting-hit');
+        row.classList.add('setting-hit');
+        row.tabIndex = -1;
+        row.focus();
+      };
+      results.append(match);
+  }
+  if (!results.childElementCount) results.append(make('p', '未找到相关设置。', 'empty'));
+};
+get('settings-search').onkeydown = event => {
+  if (event.key === 'Enter') get('settings-results').querySelector('button')?.click();
+};
+const pane = id => ({type:'group', panes:[id]});
+const split = (orientation, weights, children) => ({type:'split', orientation, weights, children});
+const presets = {
+  simple: {evidence:false, dock:false, showPanels:false, resting:[]},
+  standard: {evidence:false, dock:false, showPanels:true, resting:['evidence','diagnostics']},
+  diagnostics: {evidence:true, dock:true, showPanels:true, resting:[]}
+};
+let preset = 'standard', mirror = false;
+function renderLayoutChoices() {
+  document.querySelectorAll('[data-preset]').forEach(button => {
+    const name = button.dataset.preset;
+    const choice = presets[name];
+    const panes = [pane('sessions'), pane('conversation')];
+    const weights = [20, 80];
+    if (choice.showPanels) {
+      panes.push(pane('evidence'));
+      weights.push(choice.evidence ? 25 : 5);
+    }
+    if (mirror) {panes.reverse(); weights.reverse();}
+    const row = split('row', weights, panes);
+    const tree = choice.showPanels ? split('column', [78, choice.dock ? 22 : 8], [row, pane('diagnostics')]) : row;
+    const preview = make('div', '', 'preview-panes');
+    preview.setAttribute('aria-hidden', 'true');
+    preview.append(treeThumbnail(tree, new Set(choice.resting)));
+    button.querySelector('.preview-panes')?.remove();
+    button.prepend(preview);
+    button.setAttribute('aria-pressed', String(name === preset));
+  });
+}
+const sizeVariables = {sessions:'--session-width', evidence:'--evidence-width', dock:'--dock-height'};
+const sizeDefaults = {sessions:210, evidence:260, dock:140};
+const sizeInputs = [...document.querySelectorAll('[data-size]')];
+function renderLayoutSizes(sizes) {
+  for (const input of sizeInputs) {
+    const key = input.dataset.size;
+    const size = sizes?.[key];
+    const valid = Number.isInteger(size) && size >= +input.min && size <= +input.max;
+    input.value = valid ? size : sizeDefaults[key];
+    if (valid) document.body.style.setProperty(sizeVariables[key], size + 'px');
+    else document.body.style.removeProperty(sizeVariables[key]);
+  }
+}
+function applyLayout(name, swapped, sizes) {
+  preset = Object.hasOwn(presets, name) ? name : 'standard';
+  mirror = swapped === true;
+  document.body.classList.toggle('simple', preset === 'simple');
+  document.body.classList.toggle('mirrored', mirror);
+  get('layout-mirror').checked = mirror;
+  renderLayoutSizes(sizes);
+  renderLayoutChoices();
+  if (get('evidence-inline').hidden === presets[preset].evidence) toggleRail();
+  if (get('dock-log').hidden === presets[preset].dock) get('dock-toggle').click();
+  setSidebar(false);
+}
+function chooseLayout(name, swapped, sizes = library.layout?.sizes) {
+  persist({...library, layout:{preset:name, mirrored:swapped, sizes}}, () => applyLayout(name, swapped, sizes));
+}
+for (const input of sizeInputs) {
+  input.oninput = () => document.body.style.setProperty(sizeVariables[input.dataset.size], input.value + 'px');
+  input.onchange = () => {
+    if (!loaded || saving) {renderLayoutSizes(library.layout?.sizes); return;}
+    const sizes = {...library.layout?.sizes, [input.dataset.size]:Number(input.value)};
+    persist({...library, layout:{preset, mirrored:mirror, sizes}},
+      () => renderLayoutSizes(sizes), () => renderLayoutSizes(library.layout?.sizes));
+  };
+}
+get('layout-toggle').onclick = () => get('layout-editor').showModal();
+get('close-layout').onclick = () => get('layout-editor').close();
+get('reset-layout').onclick = () => chooseLayout('standard', false, {});
+get('swap-sides').onclick = () => chooseLayout(preset, !mirror);
+get('layout-mirror').onchange = () => chooseLayout(preset, !mirror);
+document.querySelectorAll('[data-preset]').forEach(b => b.onclick = () => chooseLayout(b.dataset.preset, mirror));
+get('sidebar-toggle').onclick = () => setSidebar(!document.body.classList.contains('sidebar-hidden'));
+function setSidebar(hidden) {
+  document.body.classList.toggle('sidebar-hidden', hidden);
+  get('sidebar-toggle').setAttribute('aria-expanded', String(!hidden));
+}
+function toggleRail() {
+  const panel = get('evidence-inline');
+  panel.hidden = !panel.hidden;
+  for (const id of ['rail-toggle', 'rail-handle']) get(id).setAttribute('aria-expanded', String(!panel.hidden));
+  if (!panel.hidden) renderEvidence(get('rail-records'));
+}
+get('rail-toggle').onclick = get('rail-handle').onclick = toggleRail;
+get('dock-toggle').onclick = () => {
+  const log = get('dock-log'), button = get('dock-toggle');
+  log.hidden = !log.hidden;
+  button.setAttribute('aria-expanded', String(!log.hidden));
+  button.textContent = log.hidden ? '▸　诊断输出' : '▾　诊断输出';
+  if (!log.hidden) paintDock();
+};
+document.addEventListener('keydown', event => {
+  if (!event.metaKey || event.altKey || event.ctrlKey || event.shiftKey) return;
+  if (event.key === ',') {event.preventDefault(); show('settings'); return;}
+  if (get('settings').open) {
+    if (event.key === 'k') { event.preventDefault(); get('open-settings-search').click(); }
+    return;
+  }
+  if (document.querySelector('dialog[open]')) return;
+  if (event.key === 'n') {event.preventDefault(); openSession(null);}
+  if (event.key === 'k') {event.preventDefault(); setSidebar(false); get('search').focus();}
+  if (event.key === 'w' && page === 'overview') {event.preventDefault(); requestTabClose(sessionId);}
+  if (event.key === 'Enter' && page === 'overview') {event.preventDefault(); get('composer').requestSubmit();}
+});
+
+function show(target, focus = true) {
+  if (target === 'settings') {
+    const settings = get('settings');
+    if (!settings.open && !get('item-actions').open) settings.showModal();
+    return;
+  }
+  page = target;
+  document.querySelectorAll('.page').forEach(section => {section.hidden = section.id !== page;});
+  document.querySelectorAll('[data-page]').forEach(button => {
+    if (button.dataset.page === page) button.setAttribute('aria-current', 'page');
+    else button.removeAttribute('aria-current');
+  });
+  renderTabs();
+  if (page === 'evidence') renderEvidence();
+  if (page === 'verify') renderTask();
+  if (page === 'runtime') loadRuntimePage();
+  if (focus) {
+    const heading = get(page).querySelector('h1');
+    heading.tabIndex = -1;
+    if (!heading.hidden) heading.focus();
+    else get('goal').focus();
+  }
+}
+function select(id) {selected = id; show('verify');}
+function paintLog(result) {
+  const log = get('log');
+  const position = log.scrollTop;
+  log.classList.toggle('nowrap', !get('wrap').checked);
+  log.textContent = result.lines.join('\n') || (result.state === 'running' ? '等待进程输出…' : '这里显示当前检查的进程输出。');
+  log.scrollTop = get('follow').checked ? log.scrollHeight : position;
+}
+function paintDock() {
+  const log = get('dock-log');
+  const result = results[active ?? latestJob];
+  const position = log.scrollTop;
+  log.classList.toggle('nowrap', !get('wrap').checked);
+  log.textContent = result?.lines.join('\n') || (active ? '等待进程输出…' : '尚无输出。可从工作台运行本地验证。');
+  log.scrollTop = get('follow').checked ? log.scrollHeight : position;
+}
+function renderTask() {
+  const result = results[selected];
+  Object.keys(selectors).forEach(id => selectors[id].setAttribute('aria-pressed', String(id === selected)));
+  get('task-name').textContent = jobs[selected][0];
+  get('task-detail').textContent = jobs[selected][1];
+  status(get('task-state'), result.state);
+  get('task-meta').textContent = result.state === 'running' ? '已启动检查' : result.rc === undefined ? '尚未运行' : `退出码 ${result.rc} · ${result.elapsed} 秒`;
+  get('run').disabled = active !== null;
+  get('run').textContent = active ? '检查运行中' : result.rc === undefined ? '运行检查' : '重新运行';
+  paintLog(result);
+}
+function renderEvidence(records = get('records')) {
+  records.replaceChildren();
+  Object.keys(results).filter(id => results[id].rc !== undefined)
+    .sort((left, right) => results[right].finished - results[left].finished).forEach(id => {
+      const result = results[id];
+      const item = make('article', '', 'panel record');
+      const header = make('div', '', 'card-top');
+      const chip = make('span', '', 'badge');
+      status(chip, result.state);
+      header.append(make('h2', jobs[id][0]), chip);
+      item.append(header, make('p', `${new Date(result.finished).toLocaleString()} · 退出码 ${result.rc} · ${result.elapsed} 秒`));
+      if (result.report) item.append(make('p', `报告目录：${result.report}`, 'path'));
+      const details = make('details', '');
+      details.append(make('summary', '查看进程输出'), make('pre', result.lines.join('\n'), 'log'));
+      item.append(details);
+      records.append(item);
+    });
+  if (!records.childElementCount) records.append(make('p', '尚无验证结果。运行检查后，实际退出码和输出会出现在这里。', 'empty'));
+}
+function finish(id, rc, report) {
+  if (id !== active) return;
+  const result = results[id];
+  result.finished = Date.now();
+  result.elapsed = ((result.finished - result.started) / 1000).toFixed(1);
+  Object.assign(result, {rc, report, state:rc === 0 ? 'pass' : 'fail'});
+  active = null;
+  latestJob = id;
+  get('runtime-status').textContent = '◉　本地模式 · ' + jobs[id][0] + ' ' + labels[result.state];
+  status(cards[id], result.state);
+  const finished = Object.values(results).filter(entry => entry.rc !== undefined).length;
+  get('overview-summary').textContent = `本次会话 · ${finished} / ${Object.keys(jobs).length} 项已有结果`;
+  if (page === 'evidence') renderEvidence();
+  if (!get('evidence-inline').hidden) renderEvidence(get('rail-records'));
+  paintDock();
+  renderTask();
+}
+function run() {
+  if (active) return;
+  const id = selected;
+  active = id;
+  get('runtime-status').textContent = '◉　正在运行 ' + jobs[id][0];
+  results[id] = {state:'running', lines:[], started:Date.now()};
+  status(cards[id], 'running');
+  renderTask();
+  paintDock();
+  try {window.webkit.messageHandlers.hetu.postMessage(id);}
+  catch (_) {
+    results[id].lines.push('本地验证服务未连接。请从 Hetu Agent 应用内打开此页面。');
+    finish(id, 1, null);
+  }
+}
+Object.entries(jobs).forEach(([id, [name, detail]]) => {
+  const card = make('button', '', 'card');
+  const top = make('div', '', 'card-top');
+  cards[id] = make('span', '', 'badge');
+  status(cards[id], 'idle');
+  top.append(make('strong', name), cards[id]);
+  card.append(top, make('p', detail));
+  card.onclick = () => select(id);
+  get('cards').append(card);
+  selectors[id] = make('button', name);
+  selectors[id].dataset.job = id;
+  selectors[id].onclick = () => select(id);
+  get('jobs').append(selectors[id]);
+});
+document.querySelectorAll('[data-page]').forEach(button => button.onclick = () => show(button.dataset.page));
+get('run').onclick = run;
+get('wrap').onchange = get('follow').onchange = () => {paintLog(results[selected]); paintDock();};
+// ---- 任务运行时页 ----
+const rt = {seq:0, pending:new Map(), current:'', loaded:false, busy:false};
+const rtLabels = {NEW:'未运行', DONE:'已完成', PAUSED:'等待放行', RECONCILE:'对账中',
+  INTERRUPTED:'已中断', ESCALATED:'已转人工', PARTIAL:'部分完成'};
+const rtTones = {NEW:'idle', DONE:'pass', PAUSED:'running', RECONCILE:'running',
+  INTERRUPTED:'fail', ESCALATED:'fail', PARTIAL:'running'};
+const ledgerLabels = {CONFIRMED:['已确认','ok'], PAUSED:['待放行','warn'], INTENT:['已登记',''],
+  EXECUTING:['执行中','warn'], UNCERTAIN:['对账中','bad'], FAILED:['失败','bad']};
+function callTaskctl(args) {
+  return new Promise(resolve => {
+    const id = ++rt.seq;
+    rt.pending.set(id, resolve);
+    try { window.webkit.messageHandlers.hetu.postMessage(JSON.stringify({op:'taskctl', id, args})); }
+    catch (_) { rt.pending.delete(id); resolve({error:'本地运行时服务未连接。'}); }
+  });
+}
+function rtBusy(busy) {
+  rt.busy = busy;
+  for (const id of ['rt-run', 'rt-refresh', 'rt-rundue']) get(id).disabled = busy;
+  document.querySelectorAll('#rt-interrupts button, #rt-job-form button, .rt-task-chip')
+    .forEach(button => { button.disabled = busy; });
+}
+function rtFail(where, value) {
+  get('runtime-status').textContent = '◉　运行时错误 · ' + where;
+  get('rt-run-hint').textContent = where + '失败：' + (value.error ?? '未知错误');
+}
+function timeAgo(ts) {
+  if (!ts) return '';
+  const minutes = Math.max(0, Math.floor((Date.now() / 1000 - ts) / 60));
+  return minutes < 1 ? '刚刚' : minutes < 60 ? minutes + ' 分钟前' : Math.floor(minutes / 60) + ' 小时前';
+}
+function renderRtStatus(data) {
+  if (data.error) { rtFail('任务状态', data); return; }
+  rt.current = data.task_id;
+  const badge = get('rt-overall');
+  badge.dataset.state = rtTones[data.overall] ?? 'idle';
+  badge.textContent = data.task_id + ' · ' + (rtLabels[data.overall] ?? data.overall);
+  get('rt-steps').replaceChildren(...data.steps.map(step => {
+    const state = step.written ? 'done' : step.ledger === 'PAUSED' ? 'paused'
+      : ['UNCERTAIN', 'EXECUTING', 'FAILED'].includes(step.ledger) ? 'fault' : 'pending';
+    const li = make('li', '', 'step ' + state);
+    const dot = make('span', step.written ? '✓' : step.ledger === 'PAUSED' ? '⚑' : '', 'step-dot');
+    dot.setAttribute('aria-hidden', 'true');
+    const main = make('div', '', 'step-main');
+    main.append(make('b', step.label ?? step.step_id),
+      make('small', step.step_id + ' · ' + step.action +
+        (step.result_hash ? ' · ' + step.result_hash.slice(0, 12) : '')));
+    const chips = make('span', '', 'step-chips');
+    if (step.risk === 'high') {
+      const risk = make('span', '高风险', 'chip');
+      risk.dataset.tone = 'risk';
+      chips.append(risk);
+    }
+    const chip = make('span', (ledgerLabels[step.ledger] ?? ['未登记', ''])[0], 'chip');
+    chip.dataset.tone = (ledgerLabels[step.ledger] ?? [, ''])[1];
+    chips.append(chip);
+    li.append(dot, main, chips);
+    return li;
+  }));
+  get('rt-steps-empty').hidden = true;
+}
+function renderRtInterrupts(data) {
+  if (data.error) { rtFail('审批列表', data); return; }
+  const box = get('rt-interrupts');
+  box.replaceChildren(...data.pending.map(item => {
+    const card = make('div', '', 'interrupt-card');
+    card.append(make('b', item.kind === 'high-risk-step' ? '高风险步骤待放行' :
+      item.kind === 'plan-drift' ? '计划漂移待确认' : '人工介入 · ' + item.kind));
+    const detail = item.kind === 'high-risk-step'
+      ? '任务 ' + item.task_id + ' · 步骤 ' + (item.payload?.step_id ?? '?') + '（' + (item.payload?.action ?? '') + '）'
+      : '任务 ' + item.task_id;
+    card.append(make('p', detail + ' · ' + timeAgo(item.created_ts)));
+    const actions = make('div', '', 'interrupt-actions');
+    const release = make('button', '放行', 'primary release-btn');
+    release.onclick = () => resolveInterrupt(item.interrupt_id, false);
+    const reject = make('button', '驳回', 'danger reject-btn');
+    reject.onclick = () => resolveInterrupt(item.interrupt_id, true);
+    actions.append(release, reject);
+    card.append(actions);
+    return card;
+  }));
+  get('rt-hitl-count').textContent = data.pending.length + ' 待处理';
+  get('rt-hitl-empty').hidden = data.pending.length > 0;
+}
+async function resolveInterrupt(id, reject) {
+  rtBusy(true);
+  const result = await callTaskctl(['release', '--interrupt', id, ...(reject ? ['--reject'] : [])]);
+  rtBusy(false);
+  if (result.error) { rtFail('审批', result); return; }
+  get('rt-run-hint').textContent = reject
+    ? '已驳回：该步骤保持挂起，任务不会越过它执行。'
+    : '已放行' + (result.released_idem ? '（' + result.released_idem + '）' : '') + '：再次点击「运行」即断点续跑。';
+  get('runtime-status').textContent = '◉　运行时 · 审批已记录';
+  await refreshRuntime({skipTasks:true});
+}
+function renderRtEvidence(data) {
+  if (data.error) { rtFail('证据链', data); return; }
+  const badge = get('rt-ev-state');
+  badge.dataset.state = data.verified ? 'pass' : 'fail';
+  badge.textContent = data.verified ? '链完整 · ' + data.total + ' 条' : '断链 @ #' + data.broken_at;
+  get('rt-chain').replaceChildren(...data.entries.slice().reverse().map(entry => {
+    const li = make('li', '', 'chain-item');
+    const main = make('div', '');
+    main.append(make('b', entry.event), make('small', ' · ' + entry.actor));
+    const hash = make('span', (entry.hash ?? '').slice(0, 12), 'hash-chip');
+    hash.title = entry.hash;
+    const time = make('time', timeAgo(entry.ts));
+    time.title = new Date(entry.ts * 1000).toLocaleString();
+    li.append(main, hash, time);
+    return li;
+  }));
+  get('rt-ev-empty').hidden = data.entries.length > 0;
+}
+function renderRtJobs(data) {
+  if (data.error) { rtFail('调度器', data); return; }
+  const body = get('rt-jobs').querySelector('tbody');
+  const slotTone = {DONE:'ok', PENDING:'', FAILED:'bad', RUNNING:'warn'};
+  body.replaceChildren(...data.slots.map(slot => {
+    const row = make('tr', '');
+    row.append(make('td', slot.job_id + ' @ ' + new Date(slot.scheduled_instant * 1000).toLocaleTimeString()));
+    const cell = make('td', '');
+    const chip = make('span', slot.state, 'chip');
+    chip.dataset.tone = slotTone[slot.state] ?? '';
+    cell.append(chip);
+    if (slot.last_error) cell.append(make('small', ' ' + slot.last_error));
+    row.append(cell, make('td', String(slot.attempts)));
+    return row;
+  }));
+  get('rt-jobs-empty').hidden = data.slots.length > 0 || !data.jobs.length;
+  get('rt-sched-meta').textContent = data.jobs.length + ' 个 job · 漏跑台账 ' + data.missed +
+    ' · 未确认投递 ' + data.unacked;
+}
+function renderRtTasks(data) {
+  if (data.error) { rtFail('任务列表', data); return; }
+  get('rt-tasks').replaceChildren(...data.tasks.map(item => {
+    const chip = make('button', '', 'rt-task-chip');
+    chip.type = 'button';
+    chip.append(document.createTextNode(item.task_id));
+    chip.append(make('small', (rtLabels[item.summary] ?? item.summary) +
+      (item.cursor != null ? ' · 游标 ' + item.cursor : '')));
+    chip.setAttribute('aria-pressed', String(item.task_id === rt.current));
+    chip.onclick = () => { get('rt-task').value = item.task_id; loadRtStatus(item.task_id); };
+    return chip;
+  }));
+  get('rt-tasks-empty').hidden = data.tasks.length > 0;
+}
+async function loadRtStatus(taskId) {
+  const data = await callTaskctl(['status', '--task', taskId]);
+  renderRtStatus(data);
+}
+async function refreshModelStatus() {
+  const badge = get('rt-model-state');
+  badge.textContent = '检测中'; badge.dataset.state = 'running';
+  const data = await callTaskctl(['model-status']);
+  const meta = get('rt-model-meta');
+  if (data.error || data.reachable === undefined) {
+    badge.textContent = '不可用'; badge.dataset.state = 'fail';
+    meta.textContent = data.error ?? '模型状态不可用。'; return;
+  }
+  const host = data.base_url.replace(/^https?:\/\//, '').split('/')[0];
+  badge.textContent = data.reachable ? (data.has_default ? '已连接' : '缺默认模型') : '不可达';
+  badge.dataset.state = data.reachable && data.has_default ? 'pass' : 'fail';
+  meta.textContent = host + ' · ' + data.model + (data.error ? ' · ' + data.error : '');
+}
+get('rt-model-test').onclick = async () => {
+  const btn = get('rt-model-test'), out = get('rt-model-reply');
+  btn.disabled = true; out.hidden = false; out.textContent = '正在询问模型（约需几秒）…';
+  const data = await callTaskctl(['model-ask', '--prompt', '只回复四个字：接入成功']);
+  out.textContent = data.error ? '模型调用失败：' + data.error : '模型回复：' + data.reply;
+  btn.disabled = false;
+};
+async function refreshRuntime({skipTasks = false} = {}) {
+  rtBusy(true);
+  refreshModelStatus();
+  const [interrupts, evidence, jobs, tasks] = await Promise.all([
+    callTaskctl(['interrupts']), callTaskctl(['evidence', '--last', '40']),
+    callTaskctl(['jobs']), skipTasks ? null : callTaskctl(['tasks'])
+  ]);
+  renderRtInterrupts(interrupts);
+  renderRtEvidence(evidence);
+  renderRtJobs(jobs);
+  if (tasks) renderRtTasks(tasks);
+  if (!rt.current && tasks && tasks.tasks.length) rt.current = tasks.tasks[0].task_id;
+  if (rt.current) await loadRtStatus(rt.current);
+  rtBusy(false);
+  rt.loaded = true;
+}
+get('rt-refresh').onclick = () => refreshRuntime();
+get('rt-run-form').onsubmit = async event => {
+  event.preventDefault();
+  const taskId = get('rt-task').value.trim();
+  if (!/^[A-Za-z0-9_-]{1,40}$/.test(taskId)) return;
+  rtBusy(true);
+  get('rt-run-hint').textContent = '正在执行（真实效果写入本机工作区）…';
+  const result = await callTaskctl(['run', '--task', taskId, '--template', get('rt-template').value]);
+  if (result.error) { rtBusy(false); rtFail('运行', result); return; }
+  rt.current = taskId;
+  get('rt-run-hint').textContent = '本次运行结果：' + (rtLabels[result.status] ?? result.status) +
+    (result.at ? '（停在 ' + result.at + '）' : '');
+  await refreshRuntime();
+};
+get('rt-job-form').onsubmit = async event => {
+  event.preventDefault();
+  const job = get('rt-job').value.trim();
+  if (!/^[A-Za-z0-9_-]{1,40}$/.test(job)) return;
+  rtBusy(true);
+  const added = await callTaskctl(['add-job', '--job', job,
+    '--interval', get('rt-interval').value, '--policy', get('rt-policy').value]);
+  if (added.error) { rtBusy(false); rtFail('登记调度', added); return; }
+  await callTaskctl(['fire', '--job', job]);
+  await refreshRuntime({skipTasks:true});
+  rtBusy(false);
+  get('runtime-status').textContent = '◉　运行时 · 调度已登记并投递';
+};
+get('rt-rundue').onclick = async () => {
+  rtBusy(true);
+  const result = await callTaskctl(['run-due']);
+  await refreshRuntime({skipTasks:true});
+  rtBusy(false);
+  if (result.error) { rtFail('到期执行', result); return; }
+  get('runtime-status').textContent = '◉　运行时 · 执行了 ' + result.executed + ' 个槽';
+};
+function loadRuntimePage() { if (!rt.loaded && !rt.busy) refreshRuntime(); }
+window.HetuAPI = {
+  setup(path, saved, error) {
+    get('data-dir').textContent = path;
+    library = saved;
+    loaded = !error;
+    get('effort').value = EFFORTS.includes(saved.effort) ? saved.effort : 'auto';
+    applyLayout(saved.layout?.preset, saved.layout?.mirrored, saved.layout?.sizes);
+    get('save-session').disabled = !loaded;
+    renderSession();
+    renderHistory();
+    renderTabs();
+    if (error) get('save-state').textContent = error;
+    refreshModels();
+    requestProviders();
+    requestMemStatus();
+  },
+  receive(batch) {
+    for (const [type, id, value] of batch) {
+      if (type === 'models') {showModels(value); continue;}
+      if (type === 'reply-delta') {
+        if (pendingChat) {
+          streamText = (streamText ?? '') + value.join('');
+          if (pendingChat.source === sessionId) renderMessages();
+        }
+        continue;
+      }
+      if (type === 'reply') {receiveReply(value); continue;}
+      if (type === 'providers') {
+        if (value.error) {
+          get('model-status').textContent = value.error;
+          if (!get('provider-form').hidden) get('provider-form-state').textContent = value.error;
+        }
+        if (value.config) {
+          providerCfg = value.config;
+          providerKinds = value.kinds ?? providerKinds;
+          providerEditing = null;
+          get('provider-form').hidden = true;
+          renderProviders();
+        }
+        continue;
+      }
+      if (type === 'memcloud') {
+        memBusy(false);
+        if (value.providers) renderMem(value);
+        else if (value.ok !== undefined) {
+          get('mem-status').textContent = '同步完成：' + (value.output ?? []).join(' / ');
+          requestMemStatus();
+        } else if (value.error) {
+          get('mem-status').textContent = value.error;
+        }
+        continue;
+      }
+      if (type === 'provider-test') {showProviderTest(id, value); continue;}
+      if (type === 'taskctl') {
+        const resolve = rt.pending.get(id);
+        if (resolve) {rt.pending.delete(id); resolve(value);}
+        continue;
+      }
+      if (id !== active) continue;
+      if (type === 'lines') {
+        const result = results[id];
+        result.lines = result.lines.concat(value).slice(-2000);
+        if (page === 'verify' && id === selected) paintLog(result);
+        if (!get('dock-log').hidden) paintDock();
+      } else if (type === 'done') {
+        finish(id, value.rc, value.report);
+      }
+    }
+  }
+};
+renderTask();
+renderTabs();
+</script>
+</body>
+</html>

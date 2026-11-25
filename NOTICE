@@ -1,0 +1,15 @@
+Hetu Agent
+Copyright (c) 2026 HongYun.dev
+
+Except for the macOS desktop frontend port under packaging/macos/hasu_port/,
+this product is an independent clean-room implementation. It does not contain,
+translate, or derive code from any third-party agent framework. See
+PROVENANCE.md for the independence evidence record and docs/CLEANROOM_POLICY.md
+for the development discipline.
+
+packaging/macos/hasu_port/ is adapted from HongYun's own prior desktop
+frontend, which itself includes MIT-licensed software from Nous Research;
+the upstream LICENSE and NOTICE are preserved in that directory.
+
+This product runs on the Python standard library and SQLite only
+(zero third-party runtime dependencies).
