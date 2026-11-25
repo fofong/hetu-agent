@@ -28,7 +28,7 @@ EXPERIMENTS = [
     ("D1", "test_d1_scheduler", "调度五实验: 幂等槽/漏跑台账/fencing/断点重试/投递解耦"),
     ("L1", "test_l1_evidence", "哈希链防篡改/独立探针结论门/滞回stall/沙箱白名单"),
     ("L3", "test_l3_evolution", "评分器物理隔离/晋级四门/心跳断点续算"),
-    ("ISO", "test_isolation", "与旧旧产品（HongYun 前作）严格区别: 运行时守卫fail-closed/静态发布门/反证夹具"),
+    ("ISO", "test_isolation", "与旧Hasu/Hermes严格区别: 运行时守卫fail-closed/静态发布门/反证夹具"),
     ("P2", "test_p2_runtime_e2e", "一体化运行时: 崩溃恢复零重复/对账续跑/高风险挂起/漂移转人工/调度集成"),
     ("FAULT", "test_fault_matrix", "故障注入矩阵: 并发租约互斥/超时对账/DB写失败降级/回执未持久化+租约到期组合故障"),
 ]
@@ -36,7 +36,11 @@ EXPERIMENTS = [
 STDLIB_HINTS = {"__future__", "os", "sys", "json", "time", "hashlib", "sqlite3", "tempfile", "threading",
                 "unittest", "uuid", "argparse", "dataclasses", "typing", "ast", "datetime",
                 "subprocess", "re", "collections", "functools", "itertools", "pathlib",
-                "io", "abc", "enum", "logging", "math", "random", "shutil", "textwrap"}
+                "io", "abc", "enum", "logging", "math", "random", "shutil", "textwrap",
+                "fnmatch", "http", "urllib", "warnings"}
+# 3.10+ 用权威 stdlib 名单，杜绝白名单漏报误伤（3.9 无此属性，退回手工名单）
+if hasattr(sys, "stdlib_module_names"):
+    STDLIB_HINTS |= set(sys.stdlib_module_names)
 
 
 def run_experiments():

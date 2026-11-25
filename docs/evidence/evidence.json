@@ -1,6 +1,6 @@
 {
-  "generated": "2026-11-18 12:59:01",
-  "python": "3.9.6",
+  "generated": "2026-11-25 21:12:15",
+  "python": "3.14.9",
   "third_party_runtime_deps": [],
   "all_green": true,
   "experiments": {
@@ -87,7 +87,7 @@
     },
     "ISO": {
       "module": "test_isolation",
-      "desc": "与旧旧产品（HongYun 前作）严格区别: 运行时守卫fail-closed/静态发布门/反证夹具",
+      "desc": "与旧Hasu/Hermes严格区别: 运行时守卫fail-closed/静态发布门/反证夹具",
       "tests": 4,
       "failures": 0,
       "errors": 0,
@@ -105,7 +105,7 @@
     },
     "FAULT": {
       "module": "test_fault_matrix",
-      "desc": "故障注入矩阵: 并发执行租约互斥/网络超时对账重放/DB写失败降级",
+      "desc": "故障注入矩阵: 并发租约互斥/超时对账/DB写失败降级/回执未持久化+租约到期组合故障",
       "tests": 9,
       "failures": 0,
       "errors": 0,
