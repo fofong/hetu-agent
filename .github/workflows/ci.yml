@@ -6,10 +6,18 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ["3.9", "3.12", "3.13"]
+        # ubuntu-latest (26.04) 不再提供 3.9 构建，3.9 钉在 ubuntu-24.04
+        include:
+          - python-version: "3.9"
+            os: ubuntu-24.04
+          - python-version: "3.12"
+            os: ubuntu-latest
+          - python-version: "3.13"
+            os: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -17,7 +25,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Unit & mechanism experiments (47+ 反例驱动)
         run: python -m unittest discover -s tests -v
-      - name: Isolation check (洁净室隔离发布门)
+      - name: Isolation check (与旧 Hasu/Hermes 严格区别)
         run: python scripts/isolation_check.py
       - name: Kernel self-check
         run: python -m hetu status
