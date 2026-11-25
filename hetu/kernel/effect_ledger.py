@@ -278,6 +278,16 @@ class EffectLedger:
         finally:
             con.close()
 
+    def receipt(self, idem_key: str) -> Optional[str]:
+        """读回已持久化回执(JSON 文本); 无回执返回 None。"""
+        con = self._con()
+        try:
+            r = con.execute("SELECT receipt FROM effect_ledger WHERE idem_key=?",
+                            (idem_key,)).fetchone()
+            return r["receipt"] if r else None
+        finally:
+            con.close()
+
     def orphans(self, stale_seconds: float = 60.0) -> list[dict]:
         """孤儿 action: 意图已持久化但执行者消失(租约过期仍 EXECUTING)。"""
         con = self._con()

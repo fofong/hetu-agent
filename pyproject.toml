@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hetu-agent"
-version = "0.3.5"
+version = "0.3.6"
 description = "Hetu Agent — causal execution kernel x multi-objective self-evolution; independent clean-room implementation"
 readme = "README.md"
 requires-python = ">=3.9"

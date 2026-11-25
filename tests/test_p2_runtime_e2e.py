@@ -42,6 +42,9 @@ class TestHappyPath(Base):
         out = r.run_task("t1", ["a", "b"], self.steps())  # 全量重放
         self.assertEqual(out["status"], DONE)
         self.assertEqual(self.counters, {"s1": 1, "s2": 1, "s3": 1})  # 零重复
+        # 重放必须读回原始业务回执, 而非字符串标记
+        self.assertEqual(out["results"],
+                         {"s1": "done-s1", "s2": "done-s2", "s3": "done-s3"})
 
 
 class TestCrashRecovery(Base):

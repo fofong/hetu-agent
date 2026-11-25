@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.6] - 2026-11-25
+### Fixed
+- **崩溃重放/全量重放读回原始业务回执**：runtime 层此前把内核状态常量（`CONFIRMED`）或字符串标记当作步骤结果返回；现统一以 Effect Ledger 持久化回执为业务结果（内核层 `execute` 返回状态常量的契约不变）。新增重放结果断言。
+### Changed
+- `TaskRunner` 未启用 `ActionPolicy` 时构造即发显式告警（策略门 0.3.x 为 opt-in，SECURITY.md 已注明；默认启用计划 v0.4）。
+### Docs
+- README Python 版本口径与 pyproject 对齐（≥3.9，实测 3.9.6 全绿）。
+
 ## [0.3.5] - 2026-11-18
 ### 隐私整改：移除全部内置内部端点（发布阻断项清零）
 - `hetu/model.py`、`local_chat.py`、`model_providers.py`、`gui.html` 不再内置任何远端端点或内部模型名；远端一律经 `HETU_MODEL_BASE_URL` / `HETU_HOST66_*` 环境变量或接入设置显式配置（见新增 `config.example`），未配置时 fail-closed 并给出明确提示。

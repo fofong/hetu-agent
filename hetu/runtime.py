@@ -5,6 +5,8 @@
 """
 from __future__ import annotations
 
+import json
+import warnings
 from typing import Any, Callable, Optional
 
 from .evidence.chain import EvidenceChain
@@ -51,6 +53,11 @@ class TaskRunner:
         self.db_path = db_path
         self.lease_ttl = lease_ttl
         self.policy = policy  # None = 不启用策略门(向后兼容); 启用即 fail-closed
+        if policy is None:
+            warnings.warn(
+                "TaskRunner 未启用 ActionPolicy: 策略门关闭(0.3.x 为 opt-in)。"
+                "生产接入请传 ActionPolicy(db) 以获得 fail-closed 门禁。",
+                stacklevel=2)
         self.chain = EvidenceChain(db_path)
         self.ledger = EffectLedger(db_path, chain=self.chain)
         self.steps = StepWrites(db_path)
@@ -63,8 +70,11 @@ class TaskRunner:
         """返回必须是可持久化结果; 一切未完成态用异常表达(不写 step 行, 重放不卡死)。"""
         idem = "%s:%s" % (task_id, step.step_id)
         state = self.ledger.state(idem)
-        if state == CONFIRMED:  # 崩溃重放: 外部已确认, 零重复
-            return "replayed-from-ledger"
+        if state == CONFIRMED:  # 崩溃重放: 外部已确认, 零重复; 读回原回执而非标记
+            raw = self.ledger.receipt(idem)
+            if raw is not None:
+                return json.loads(raw)
+            return "replayed-from-ledger"  # 无回执的旧数据兜底
         if state in (UNCERTAIN, EXECUTING):
             # 回执丢失或孤儿(执行者疑似死亡): 一律先对账, 禁盲重放/盲接管
             probe = self.probes.get(step.action)
@@ -98,6 +108,9 @@ class TaskRunner:
         result = self.ledger.execute(idem, "runner", tok, step.effect)
         if result == UNCERTAIN:
             raise StepUncertain(idem)
+        raw = self.ledger.receipt(idem)  # 业务结果以回执为准(状态常量仅是内核信号)
+        if raw is not None:
+            return json.loads(raw)
         return result
 
     def run_task(self, task_id: str, plan: list, steps: list,
