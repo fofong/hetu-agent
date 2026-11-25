@@ -75,7 +75,7 @@ L0 因果内核   Effect Ledger · step_writes · fork 污染传播 · 归档 ·
 ## 文档
 
 - `docs/CLEANROOM_POLICY.md` — 洁净室开发纪律与隔离守卫说明
-- `docs/CLA.md` — 贡献者许可协议草案（MIT + 非独占 CLA，待法务定稿）
+- `docs/CLA.md` — 贡献者许可协议 v2.1（MIT + 非独占；签署通道：PR 内评论一句，见 CONTRIBUTING.md）
 - `docs/FUNCTIONAL_SPEC.md` — 功能规格书（Phase 0 冻结件）
 - `docs/CLEANROOM_POLICY.md` — 洁净室六步纪律与访问日志
 - `docs/RIGHTS_CHAIN.md` — 权利链协议（MIT + 非独占 CLA）

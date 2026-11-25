@@ -15,8 +15,15 @@
 ## CLA（权利链）
 
 贡献通过 **MIT + 非独占 CLA** 路线管理：你保留版权，签署 CLA 授予项目方不可撤销的
-使用/修改/分发/约定再许可授权与专利授权（详见 `docs/RIGHTS_CHAIN.md`）。首个 PR 前
-请完成 CLA 签署流程。
+使用/修改/分发/约定再许可授权与专利授权（详见 `docs/CLA.md`、`docs/RIGHTS_CHAIN.md`）。
+
+**签署流程（首个 PR 时，30 秒）**：在你的 PR 下评论一句签署语句即可，CI 的 `cla`
+状态检查会自动记录签名（`docs/cla-signatures.json`，公开可审计）并通过：
+
+- 英文：`I have read the CLA Document and I hereby sign the CLA.`
+- 中文：`我已阅读 CLA 文档（docs/CLA.md）并确认签署 CLA`
+
+签名以 GitHub 账号为准，一人一次，后续 PR 免签。维护方账号与机器人豁免。
 
 ## 开发
 
